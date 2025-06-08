@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
 import { useHomeLocation } from '../contexts/HomeLocationContext';
 import { Coordinates, HomeLocation, ProximityDetectionState } from '../types/location';
+import { apiService } from '../services/apiService';
+import { deviceService } from '../services/deviceService';
 
 interface UseProximityDetectionOptions {
   enableWatching?: boolean;
@@ -116,8 +118,7 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
 
   const watchSubscription = useRef<Location.LocationSubscription | null>(null);
   const proximityCheckInterval = useRef<NodeJS.Timeout | null>(null);
-  const lastKnownProximityState = useRef<boolean>(false);
-  // Proximity event callbacks
+  const lastKnownProximityState = useRef<boolean>(false);  // Proximity event callbacks
   const onProximityEnter = useCallback(async (event: ProximityEvent) => {
     console.log('Proximity Enter:', event);
     
@@ -127,6 +128,25 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
       eventType: 'enter',
       distance: event.distance,
     });
+
+    // Send event to API
+    try {
+      const deviceId = await deviceService.getDeviceId();
+      const userId = await deviceService.getUserId();
+      
+      await apiService.sendProximityEvent({
+        type: 'enter',
+        homeLocationId: event.homeLocation.id,
+        homeLocationName: event.homeLocation.name,
+        coordinates: event.homeLocation.coordinates,
+        distance: event.distance,
+        timestamp: new Date().toISOString(),
+        deviceId,
+        userId,
+      });
+    } catch (error) {
+      console.error('Error sending proximity enter event to API:', error);
+    }
 
     // Update detection state - reset modal shown flag on new entry
     dispatch({
@@ -139,8 +159,7 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
         modalShownForCurrentSession: false, // Reset to allow modal to show again
       },
     });
-  }, [addHistoryEntry, dispatch]);
-  const onProximityExit = useCallback(async (event: ProximityEvent) => {
+  }, [addHistoryEntry, dispatch]);const onProximityExit = useCallback(async (event: ProximityEvent) => {
     console.log('Proximity Exit:', event);
     
     // Add history entry
@@ -148,7 +167,24 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
       homeLocationId: event.homeLocation.id,
       eventType: 'exit',
       distance: event.distance,
-    });
+    });    // Send event to API
+    try {
+      const deviceId = await deviceService.getDeviceId();
+      const userId = await deviceService.getUserId();
+      
+      await apiService.sendProximityEvent({
+        type: 'exit',
+        homeLocationId: event.homeLocation.id,
+        homeLocationName: event.homeLocation.name,
+        coordinates: event.homeLocation.coordinates,
+        distance: event.distance,
+        timestamp: new Date().toISOString(),
+        deviceId,
+        userId,
+      });
+    } catch (error) {
+      console.error('Error sending proximity exit event to API:', error);
+    }
 
     // Update detection state - reset modal shown flag when exiting
     dispatch({

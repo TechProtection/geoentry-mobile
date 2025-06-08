@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, Alert, Switch, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { ScrollView, Alert, Switch, TouchableOpacity, Modal, Dimensions, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import MapView, { Marker, Circle } from 'react-native-maps';
 import styled from 'styled-components/native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../theme';
 import { useHomeLocation } from '../contexts/HomeLocationContext';
 import { PROXIMITY_RADIUS_OPTIONS } from '../types/location';
 import { calculateDistance } from '../hooks/useProximityDetection';
+
+const { width, height } = Dimensions.get('window');
 
 const Container = styled.ScrollView`
   flex: 1;
@@ -176,6 +179,164 @@ const StatusDot = styled.View<{ active: boolean }>`
   margin-right: ${SPACING.sm}px;
 `;
 
+const LocationSelectionCard = styled.View`
+  background-color: ${COLORS.secondary};
+  border-radius: 12px;
+  padding: ${SPACING.lg}px;
+  margin-bottom: ${SPACING.md}px;
+`;
+
+const LocationMethodContainer = styled.View`
+  flex-direction: row;
+  gap: ${SPACING.md}px;
+  margin-top: ${SPACING.sm}px;
+`;
+
+const LocationMethodButton = styled.TouchableOpacity<{ selected?: boolean }>`
+  flex: 1;
+  background-color: ${({ selected }: { selected?: boolean }) => selected ? COLORS.accent : COLORS.background};
+  border-radius: 8px;
+  padding: ${SPACING.md}px;
+  align-items: center;
+  border: 1px solid ${COLORS.accent}33;
+  flex-direction: row;
+  justify-content: center;
+`;
+
+const LocationMethodText = styled.Text<{ selected?: boolean }>`
+  color: ${({ selected }: { selected?: boolean }) => selected ? COLORS.background : COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.small}px;
+  font-weight: 600;
+  margin-left: ${SPACING.xs}px;
+`;
+
+const MapModal = styled.Modal``;
+
+const MapContainer = styled.View`
+  flex: 1;
+  background-color: ${COLORS.background};
+`;
+
+const MapHeader = styled.View`
+  background-color: ${COLORS.secondary};
+  padding: ${SPACING.lg}px;
+  padding-top: 50px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const MapHeaderTitle = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.subtitle}px;
+  font-weight: 600;
+`;
+
+const MapActionsContainer = styled.View`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: ${COLORS.secondary};
+  padding: ${SPACING.lg}px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+`;
+
+const MapInfoCard = styled.View`
+  background-color: ${COLORS.background};
+  border-radius: 12px;
+  padding: ${SPACING.md}px;
+  margin-bottom: ${SPACING.md}px;
+`;
+
+const MapInfoText = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.small}px;
+  text-align: center;
+  margin-bottom: ${SPACING.sm}px;
+`;
+
+const SelectedLocationCard = styled.View`
+  background-color: ${COLORS.accent}22;
+  border-radius: 8px;
+  padding: ${SPACING.md}px;
+  margin-bottom: ${SPACING.md}px;
+`;
+
+const SelectedLocationText = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.small}px;
+  font-weight: 600;
+`;
+
+const RadiusPreview = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: ${SPACING.sm}px;
+`;
+
+const RadiusPreviewText = styled.Text`
+  color: ${COLORS.accent};
+  font-size: ${TYPOGRAPHY.small}px;
+`;
+
+// Modal Overlay
+const ModalOverlay = styled.TouchableOpacity`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const InfoModal = styled.View`
+  background-color: ${COLORS.secondary};
+  border-radius: 16px;
+  margin: ${SPACING.xl}px;
+  padding: ${SPACING.lg}px;
+  max-width: 300px;
+  shadow-color: #000;
+  shadow-offset: 0px 4px;
+  shadow-opacity: 0.3;
+  shadow-radius: 8px;
+  elevation: 8;
+`;
+
+const InfoModalTitle = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.subtitle}px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: ${SPACING.md}px;
+`;
+
+const InfoModalText = styled.Text`
+  color: ${COLORS.textPrimary}99;
+  font-size: ${TYPOGRAPHY.body}px;
+  text-align: center;
+  line-height: 22px;
+  margin-bottom: ${SPACING.lg}px;
+`;
+
+const InfoModalButton = styled.TouchableOpacity`
+  background-color: ${COLORS.accent};
+  border-radius: 8px;
+  padding: ${SPACING.md}px;
+  align-items: center;
+`;
+
+const InfoModalButtonText = styled.Text`
+  color: ${COLORS.background};
+  font-size: ${TYPOGRAPHY.body}px;
+  font-weight: 600;
+`;
+
 interface SetupFormData {
   name: string;
   coordinates: {
@@ -185,6 +346,11 @@ interface SetupFormData {
   radius: number;
   address: string;
   isActive: boolean;
+}
+
+interface LocationSelectionMethod {
+  current: boolean;
+  map: boolean;
 }
 
 const HomeSetupScreen: React.FC = () => {
@@ -202,6 +368,21 @@ const HomeSetupScreen: React.FC = () => {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [selectedMapLocation, setSelectedMapLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [mapRegion, setMapRegion] = useState<{
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  } | null>(null);
+  const mapRef = useRef<MapView>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [locationMethod, setLocationMethod] = useState<LocationSelectionMethod>({ current: true, map: false });
 
   useEffect(() => {
     // Check if this is the first time (no home locations)
@@ -356,6 +537,52 @@ const HomeSetupScreen: React.FC = () => {
     setShowForm(false);
   };
 
+  const handleMapPress = (event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    setSelectedLocation({ latitude, longitude });
+  };
+
+  const openMapModal = () => {
+    setLocationMethod({ current: false, map: true });
+    setShowMapModal(true);
+    setShowInfoModal(true);
+  };
+
+  const confirmLocationSelection = async () => {
+    if (!selectedLocation) return;
+
+    setFormData(prev => ({
+      ...prev,
+      coordinates: selectedLocation,
+      address: '', // Clear address temporarily
+    }));
+
+    // Try to get address for the selected location
+    try {
+      const addressResult = await Location.reverseGeocodeAsync(selectedLocation);
+      if (addressResult.length > 0) {
+        const addr = addressResult[0];
+        const addressString = [addr.name, addr.street, addr.city, addr.region]
+          .filter(Boolean)
+          .join(', ');
+        setFormData(prev => ({ ...prev, address: addressString }));
+      }
+    } catch (error) {
+      console.log('Could not get address for selected location:', error);
+    }
+
+    setShowMapModal(false);
+    setSelectedLocation(null);
+    setShowInfoModal(false);
+  };
+
+  const cancelMapSelection = () => {
+    setSelectedLocation(null);
+    setShowMapModal(false);
+    setShowInfoModal(false);
+    setLocationMethod({ current: true, map: false });
+  };
+
   return (
     <Container showsVerticalScrollIndicator={false}>
       {!showForm && (
@@ -501,8 +728,134 @@ const HomeSetupScreen: React.FC = () => {
             <MaterialIcons name="cancel" size={20} color={COLORS.textPrimary} />
             <ButtonText variant="secondary">Cancelar</ButtonText>
           </ActionButton>
+
+          <LocationSelectionCard>
+            <Label>Método de Selección de Ubicación</Label>
+            <LocationMethodContainer>
+              <LocationMethodButton
+                selected={locationMethod.current}
+                onPress={() => setLocationMethod({ current: true, map: false })}
+              >
+                <MaterialIcons name="my-location" size={18} color={locationMethod.current ? COLORS.background : COLORS.accent} />
+                <LocationMethodText selected={locationMethod.current}>
+                  Ubicación Actual
+                </LocationMethodText>
+              </LocationMethodButton>              
+              <LocationMethodButton
+                selected={locationMethod.map}
+                onPress={openMapModal}
+              >
+                <MaterialIcons name="map" size={18} color={locationMethod.map ? COLORS.background : COLORS.accent} />
+                <LocationMethodText selected={locationMethod.map}>
+                  Seleccionar en el Mapa
+                </LocationMethodText>
+              </LocationMethodButton>
+            </LocationMethodContainer>
+          </LocationSelectionCard>
         </Card>
       )}
+
+      <MapModal
+        visible={showMapModal}
+        onRequestClose={cancelMapSelection}
+        animationType="slide"
+      >
+        <MapContainer>
+          <MapHeader>
+            <TouchableOpacity onPress={cancelMapSelection}>
+              <MaterialIcons name="arrow-back" size={24} color={COLORS.textPrimary} />
+            </TouchableOpacity>
+            <MapHeaderTitle>Seleccionar Ubicación en el Mapa</MapHeaderTitle>
+            <View style={{ width: 24 }} /> {/* Placeholder for alignment */}
+          </MapHeader>
+
+          <MapView
+            style={{ flex: 1 }}
+            initialRegion={{
+              latitude: formData.coordinates?.latitude || 37.78825,
+              longitude: formData.coordinates?.longitude || -122.4324,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+            onPress={handleMapPress}
+          >
+            {formData.coordinates && (
+              <Marker
+                coordinate={formData.coordinates}
+                title={formData.name}
+                description={`Radio: ${formData.radius}m`}
+                pinColor={COLORS.accent}
+              />
+            )}
+            {selectedLocation && (
+              <Marker
+                coordinate={selectedLocation}
+                pinColor={COLORS.statusGreen}
+              />
+            )}
+            {formData.coordinates && (
+              <Circle
+                center={formData.coordinates}
+                radius={formData.radius}
+                strokeColor={`${COLORS.accent}33`}
+                fillColor={`${COLORS.accent}11`}
+              />
+            )}
+          </MapView>          
+          <MapActionsContainer>
+            <ActionButton
+              variant="outline"
+              onPress={async () => {
+                await getCurrentCoordinates();
+                if (formData.coordinates) {
+                  setSelectedLocation(formData.coordinates);
+                }
+              }}
+              disabled={isGettingLocation}
+            >
+              <MaterialIcons 
+                name={isGettingLocation ? "hourglass-empty" : "my-location"} 
+                size={20} 
+                color={COLORS.accent} 
+              />
+              <ButtonText variant="outline">
+                {isGettingLocation ? 'Obteniendo...' : 'Usar Mi Ubicación'}
+              </ButtonText>
+            </ActionButton>
+            
+            <ActionButton
+              onPress={confirmLocationSelection}
+              disabled={!selectedLocation}
+            >
+              <MaterialIcons name="check" size={20} color={COLORS.background} />
+              <ButtonText>Confirmar Selección</ButtonText>
+            </ActionButton>
+            
+            <ActionButton
+              variant="secondary"
+              onPress={cancelMapSelection}
+            >
+              <MaterialIcons name="close" size={20} color={COLORS.textPrimary} />
+              <ButtonText variant="secondary">Cancelar</ButtonText>
+            </ActionButton>
+          </MapActionsContainer>          
+        </MapContainer>
+
+        {/* Modal de información que se puede cerrar */}
+        {showInfoModal && (
+          <ModalOverlay activeOpacity={1} onPress={() => setShowInfoModal(false)}>
+            <InfoModal>
+              <InfoModalTitle>📍 Seleccionar Ubicación</InfoModalTitle>
+              <InfoModalText>
+                Toca en cualquier punto del mapa para seleccionar una ubicación específica para tu casa.
+              </InfoModalText>
+              <InfoModalButton onPress={() => setShowInfoModal(false)}>
+                <InfoModalButtonText>Entendido</InfoModalButtonText>
+              </InfoModalButton>
+            </InfoModal>
+          </ModalOverlay>
+        )}
+      </MapModal>
     </Container>
   );
 };

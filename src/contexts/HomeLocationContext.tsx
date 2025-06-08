@@ -7,6 +7,7 @@ import {
   ProximityDetectionState,
   DEFAULT_PROXIMITY_SETTINGS,
 } from '../types/location';
+import { apiService } from '../services/apiService';
 
 interface HomeLocationState {
   homeLocations: HomeLocation[];
@@ -108,35 +109,54 @@ const STORAGE_KEYS = {
 
 export const HomeLocationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(homeLocationReducer, initialState);
-
   const loadData = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
 
-      // Load home locations
-      const homeLocationsData = await AsyncStorage.getItem(STORAGE_KEYS.HOME_LOCATIONS);
-      if (homeLocationsData) {
-        const homeLocations = JSON.parse(homeLocationsData);
-        dispatch({ type: 'SET_HOME_LOCATIONS', payload: homeLocations });
+      // Try to load home locations from API first
+      try {
+        const apiLocations = await apiService.getLocations();
+        if (apiLocations.length > 0) {
+          dispatch({ type: 'SET_HOME_LOCATIONS', payload: apiLocations });
+          // Save to local storage as backup
+          await AsyncStorage.setItem(STORAGE_KEYS.HOME_LOCATIONS, JSON.stringify(apiLocations));
+        } else {
+          // If API returns empty, load from local storage
+          const homeLocationsData = await AsyncStorage.getItem(STORAGE_KEYS.HOME_LOCATIONS);
+          if (homeLocationsData) {
+            const homeLocations = JSON.parse(homeLocationsData);
+            dispatch({ type: 'SET_HOME_LOCATIONS', payload: homeLocations });
+          }
+        }
+      } catch (apiError) {
+        console.log('API not available, loading from local storage:', apiError);
+        // Fallback to local storage if API fails
+        const homeLocationsData = await AsyncStorage.getItem(STORAGE_KEYS.HOME_LOCATIONS);
+        if (homeLocationsData) {
+          const homeLocations = JSON.parse(homeLocationsData);
+          dispatch({ type: 'SET_HOME_LOCATIONS', payload: homeLocations });
+        }
       }
 
-      // Load proximity settings
+      // Load proximity settings (only from local storage)
       const proximitySettingsData = await AsyncStorage.getItem(STORAGE_KEYS.PROXIMITY_SETTINGS);
       if (proximitySettingsData) {
         const proximitySettings = JSON.parse(proximitySettingsData);
         dispatch({ type: 'SET_PROXIMITY_SETTINGS', payload: proximitySettings });
       }
 
-      // Load location history
+      // Load location history (only from local storage)
       const historyData = await AsyncStorage.getItem(STORAGE_KEYS.LOCATION_HISTORY);
       if (historyData) {
         const history = JSON.parse(historyData);
-        dispatch({ type: 'ADD_HISTORY_ENTRY', payload: history[0] }); // Add first entry to initialize
-        // Add rest of the entries
-        history.slice(1).forEach((entry: LocationHistoryEntry) => {
-          dispatch({ type: 'ADD_HISTORY_ENTRY', payload: entry });
-        });
+        if (history.length > 0) {
+          dispatch({ type: 'ADD_HISTORY_ENTRY', payload: history[0] }); // Add first entry to initialize
+          // Add rest of the entries
+          history.slice(1).forEach((entry: LocationHistoryEntry) => {
+            dispatch({ type: 'ADD_HISTORY_ENTRY', payload: entry });
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -145,44 +165,85 @@ export const HomeLocationProvider: React.FC<{ children: ReactNode }> = ({ childr
       dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
-
   const saveHomeLocation = async (locationData: Omit<HomeLocation, 'id' | 'createdAt'>) => {
     try {
-      const newLocation: HomeLocation = {
-        ...locationData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-      };
-
-      dispatch({ type: 'ADD_HOME_LOCATION', payload: newLocation });
+      dispatch({ type: 'SET_LOADING', payload: true });
       
-      const updatedLocations = [...state.homeLocations, newLocation];
-      await AsyncStorage.setItem(STORAGE_KEYS.HOME_LOCATIONS, JSON.stringify(updatedLocations));
-    } catch (error) {
+      // Try to save to API first
+      try {
+        const savedLocation = await apiService.saveLocation(locationData);
+        dispatch({ type: 'ADD_HOME_LOCATION', payload: savedLocation });
+        
+        // Save to local storage as backup
+        const updatedLocations = [...state.homeLocations, savedLocation];
+        await AsyncStorage.setItem(STORAGE_KEYS.HOME_LOCATIONS, JSON.stringify(updatedLocations));
+      } catch (apiError) {
+        console.log('API save failed, saving locally:', apiError);
+        // Fallback to local save if API fails
+        const newLocation: HomeLocation = {
+          ...locationData,
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+        };
+
+        dispatch({ type: 'ADD_HOME_LOCATION', payload: newLocation });
+        
+        const updatedLocations = [...state.homeLocations, newLocation];
+        await AsyncStorage.setItem(STORAGE_KEYS.HOME_LOCATIONS, JSON.stringify(updatedLocations));
+      }    } catch (error) {
       console.error('Error saving home location:', error);
       dispatch({ type: 'SET_ERROR', payload: 'Error al guardar la ubicación' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
   const updateHomeLocation = async (id: string, updates: Partial<HomeLocation>) => {
     try {
-      dispatch({ type: 'UPDATE_HOME_LOCATION', payload: { id, updates } });
+      dispatch({ type: 'SET_LOADING', payload: true });
       
-      const updatedLocations = state.homeLocations.map(location =>
-        location.id === id ? { ...location, ...updates } : location
-      );
-      await AsyncStorage.setItem(STORAGE_KEYS.HOME_LOCATIONS, JSON.stringify(updatedLocations));
+      // Try to update via API first
+      try {
+        const updatedLocation = await apiService.updateLocation(id, updates);
+        dispatch({ type: 'UPDATE_HOME_LOCATION', payload: { id, updates: updatedLocation } });
+        
+        // Update local storage
+        const updatedLocations = state.homeLocations.map(location =>
+          location.id === id ? updatedLocation : location
+        );
+        await AsyncStorage.setItem(STORAGE_KEYS.HOME_LOCATIONS, JSON.stringify(updatedLocations));
+      } catch (apiError) {
+        console.log('API update failed, updating locally:', apiError);
+        // Fallback to local update if API fails
+        dispatch({ type: 'UPDATE_HOME_LOCATION', payload: { id, updates } });
+        
+        const updatedLocations = state.homeLocations.map(location =>
+          location.id === id ? { ...location, ...updates } : location
+        );
+        await AsyncStorage.setItem(STORAGE_KEYS.HOME_LOCATIONS, JSON.stringify(updatedLocations));
+      }
     } catch (error) {
       console.error('Error updating home location:', error);
       dispatch({ type: 'SET_ERROR', payload: 'Error al actualizar la ubicación' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
   const deleteHomeLocation = async (id: string) => {
     try {
-      dispatch({ type: 'DELETE_HOME_LOCATION', payload: id });
+      dispatch({ type: 'SET_LOADING', payload: true });
       
-      const filteredLocations = state.homeLocations.filter(location => location.id !== id);
+      // Try to delete via API first
+      try {
+        await apiService.deleteLocation(id);
+        dispatch({ type: 'DELETE_HOME_LOCATION', payload: id });
+      } catch (apiError) {
+        console.log('API delete failed, deleting locally:', apiError);
+        // Fallback to local delete if API fails
+        dispatch({ type: 'DELETE_HOME_LOCATION', payload: id });
+      }
+        const filteredLocations = state.homeLocations.filter(location => location.id !== id);
       await AsyncStorage.setItem(STORAGE_KEYS.HOME_LOCATIONS, JSON.stringify(filteredLocations));
       
       // Also remove related history entries
@@ -191,6 +252,8 @@ export const HomeLocationProvider: React.FC<{ children: ReactNode }> = ({ childr
     } catch (error) {
       console.error('Error deleting home location:', error);
       dispatch({ type: 'SET_ERROR', payload: 'Error al eliminar la ubicación' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 

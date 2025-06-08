@@ -421,8 +421,7 @@ const MoreScreen = () => {
                     <ProfileDetail>+1 (555) 123-4567</ProfileDetail>
                     <ProfileDetail>Home Group • Admin</ProfileDetail>
                     <ProfileDetail>Member since March 2024</ProfileDetail>
-                </ProfileCard>
-                
+                    </ProfileCard>
                 <ActionButton accent>
                     <ButtonText dark>Edit Profile</ButtonText>
                 </ActionButton>
@@ -455,7 +454,7 @@ const MoreScreen = () => {
                         }}
                         onPress={() => setShowHomeSetup(false)}
                     >
-                        <MaterialIcons name="close" size={24} color={COLORS.textPrimary} />
+                      <MaterialIcons name="close" size={24} color={COLORS.textPrimary} />
                     </TouchableOpacity>
                     <HomeSetupScreen />
                 </Container>

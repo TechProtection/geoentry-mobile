@@ -780,9 +780,9 @@ const LocationScreen: React.FC = () => {
                           <HomeLocationName>{homeLocation.name}</HomeLocationName>
                           <HomeLocationDistance isNear={isNear}>
                             {distance ? formatDistance(distance) : 'Calculando...'} • Radio: {homeLocation.radius}m
-                            {!homeLocation.isActive && ' • Inactiva'}
-                          </HomeLocationDistance>
-                        </HomeLocationInfo>                        
+                            {!homeLocation.isActive && ' • Inactiva'}                          
+                            </HomeLocationDistance>
+                        </HomeLocationInfo>
                         <View style={{ alignItems: 'center' }}>
                           <MaterialIcons 
                             name={isNear ? "home" : "location-city"} 
@@ -843,8 +843,8 @@ const LocationScreen: React.FC = () => {
                   trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
                   thumbColor={COLORS.textPrimary}
                 />
-              </SettingRow>
-            </SettingsSection>          
+              </SettingRow>            
+              </SettingsSection>
             </CoordinatesCard>
         )}
         

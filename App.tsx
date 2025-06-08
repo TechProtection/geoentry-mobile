@@ -31,17 +31,31 @@ export default function App() {
                         <NavigationContainer>
                             <AppContainer>
                                 <StatusBar barStyle="light-content" backgroundColor={theme.COLORS.background} />
-                                <Tab.Navigator
-                                    screenOptions={{
+                                <Tab.Navigator                                    screenOptions={{
                                         tabBarStyle: {
                                             backgroundColor: theme.COLORS.secondary,
-                                            height: Platform.OS === 'android' ? 105 : 85,
-                                            borderTopWidth: 0,
-                                            paddingBottom: Platform.OS === 'android' ? 30 : 8,
+                                            height: Platform.OS === 'android' ? 85 : 85,
+                                            borderTopWidth: 1,
+                                            borderTopColor: theme.COLORS.background,
+                                            paddingBottom: Platform.OS === 'android' ? 15 : 10,
                                             paddingTop: 8,
+                                            paddingHorizontal: 12,
+                                            elevation: 8,
+                                            shadowColor: '#000',
+                                            shadowOffset: { width: 0, height: -2 },
+                                            shadowOpacity: 0.1,
+                                            shadowRadius: 8,
                                         },
                                         tabBarActiveTintColor: theme.COLORS.accent,
-                                        tabBarInactiveTintColor: `${theme.COLORS.textPrimary}99`,
+                                        tabBarInactiveTintColor: `${theme.COLORS.textPrimary}66`,
+                                        tabBarLabelStyle: {
+                                            fontSize: 10,
+                                            fontWeight: '600',
+                                            marginTop: 2,
+                                        },
+                                        tabBarIconStyle: {
+                                            marginTop: 4,
+                                        },
                                         headerStyle: {
                                             backgroundColor: theme.COLORS.background,
                                             height: 56,
