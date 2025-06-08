@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { ScrollView, Switch, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { ScrollView, Switch, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import styled from 'styled-components/native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../theme';
+import { useHomeLocation } from '../contexts/HomeLocationContext';
+import HomeSetupScreen from './HomeSetupScreen';
 
 const Container = styled.View`
   flex: 1;
@@ -250,10 +253,15 @@ const faqItems = [
 ];
 
 const MoreScreen = () => {
+    const navigation = useNavigation();
+    const { state } = useHomeLocation();
+    const { homeLocations } = state;
+    
     const [darkMode, setDarkMode] = useState(true);
     const [nightMode, setNightMode] = useState(false);
     const [brightness, setBrightness] = useState(86);
     const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
+    const [showHomeSetup, setShowHomeSetup] = useState(false);
     const [contactForm, setContactForm] = useState({
         name: '',
         email: '',
@@ -291,24 +299,19 @@ const MoreScreen = () => {
                             <NotificationTime>{notification.time}</NotificationTime>
                         </NotificationContent>
                     </NotificationItem>
-                ))}
-
+                ))}                
                 <SectionTitle>Settings</SectionTitle>
+                
                 <SettingItem>
-                    <SettingText>Dark Mode</SettingText>
-                    <Switch
-                        value={darkMode}
-                        onValueChange={setDarkMode}
-                        trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
-                        thumbColor={COLORS.textPrimary}
-                    />
-                </SettingItem>
-
-                <SettingItem>
-                    <SettingText>Language</SettingText>
-                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <SettingText style={{ marginRight: SPACING.xs }}>English</SettingText>
-                        <MaterialIcons name="keyboard-arrow-down" size={20} color={COLORS.textPrimary} />
+                    <SettingText>Configurar Ubicaciones de Casa</SettingText>
+                    <TouchableOpacity 
+                        style={{ flexDirection: 'row', alignItems: 'center' }}
+                        onPress={() => setShowHomeSetup(true)}
+                    >
+                        <SettingText style={{ marginRight: SPACING.xs, color: COLORS.accent, fontSize: TYPOGRAPHY.small }}>
+                            {homeLocations.length} ubicación{homeLocations.length !== 1 ? 'es' : ''}
+                        </SettingText>
+                        <MaterialIcons name="chevron-right" size={20} color={COLORS.accent} />
                     </TouchableOpacity>
                 </SettingItem>
 
@@ -419,7 +422,7 @@ const MoreScreen = () => {
                     <ProfileDetail>Home Group • Admin</ProfileDetail>
                     <ProfileDetail>Member since March 2024</ProfileDetail>
                 </ProfileCard>
-
+                
                 <ActionButton accent>
                     <ButtonText dark>Edit Profile</ButtonText>
                 </ActionButton>
@@ -428,6 +431,35 @@ const MoreScreen = () => {
                     <ButtonText>Delete Account</ButtonText>
                 </ActionButton>
             </Content>
+
+            {/* Home Setup Modal */}
+            <Modal
+                visible={showHomeSetup}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowHomeSetup(false)}
+            >
+                <Container style={{ paddingTop: 40 }}>
+                    <TouchableOpacity
+                        style={{
+                            position: 'absolute',
+                            top: 50,
+                            right: 20,
+                            zIndex: 1000,
+                            backgroundColor: COLORS.secondary,
+                            borderRadius: 20,
+                            width: 40,
+                            height: 40,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                        onPress={() => setShowHomeSetup(false)}
+                    >
+                        <MaterialIcons name="close" size={24} color={COLORS.textPrimary} />
+                    </TouchableOpacity>
+                    <HomeSetupScreen />
+                </Container>
+            </Modal>
         </Container>
     );
 };
