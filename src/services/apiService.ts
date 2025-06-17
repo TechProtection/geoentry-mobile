@@ -1,6 +1,6 @@
 import { HomeLocation } from '../types/location';
 
-const API_BASE_URL = 'https://geoentry-prueba1.free.beeceptor.com/api';
+const API_BASE_URL = 'https://geoentry-rest-api.onrender.com/api';
 
 export interface ApiHomeLocation {
   id?: string;
@@ -57,7 +57,7 @@ class ApiService {
       console.log('Raw response text:', responseText);
 
       if (!responseText) {
-        return {} as T; // Return empty object for successful requests with no body
+        return {} as T;
       }
 
       try {
