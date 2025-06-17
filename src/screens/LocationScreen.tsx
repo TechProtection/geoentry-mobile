@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, Linking, ScrollView, Clipboard } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Linking, ScrollView, Clipboard, Switch } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import styled from 'styled-components/native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../theme';
+import { useHomeLocation } from '../contexts/HomeLocationContext';
+import { useProximityDetection } from '../hooks/useProximityDetection';
+import { ProximityModal } from '../components/ProximityModal';
 
 // Styled Components
 const Container = styled.ScrollView`
@@ -127,6 +130,112 @@ const AccuracyText = styled.Text`
   font-size: ${TYPOGRAPHY.small}px;
 `;
 
+const ProximityCard = styled.View`
+  background-color: ${COLORS.secondary};
+  border-radius: 12px;
+  padding: ${SPACING.lg}px;
+  margin-bottom: ${SPACING.lg}px;
+`;
+
+const ProximityHeader = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: ${SPACING.md}px;
+`;
+
+const ProximityTitle = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.subtitle}px;
+  font-weight: 600;
+`;
+
+const ProximityStatus = styled.Text<{ isNear: boolean }>`
+  color: ${(props: { isNear: boolean }) => props.isNear ? COLORS.statusGreen : COLORS.textPrimary}99;
+  font-size: ${TYPOGRAPHY.body}px;
+  margin-bottom: ${SPACING.sm}px;
+`;
+
+const HomeLocationItem = styled.TouchableOpacity`
+  background-color: ${COLORS.background};
+  border-radius: 8px;
+  padding: ${SPACING.md}px;
+  margin-bottom: ${SPACING.sm}px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const HomeLocationInfo = styled.View`
+  flex: 1;
+`;
+
+const HomeLocationName = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.body}px;
+  font-weight: 600;
+  margin-bottom: ${SPACING.xs}px;
+`;
+
+const HomeLocationDistance = styled.Text<{ isNear: boolean }>`
+  color: ${(props: { isNear: boolean }) => props.isNear ? COLORS.statusGreen : COLORS.textPrimary}99;
+  font-size: ${TYPOGRAPHY.small}px;
+`;
+
+const SettingsSection = styled.View`
+  margin-top: ${SPACING.lg}px;
+`;
+
+const SettingRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${SPACING.md}px 0;
+  border-bottom-width: 1px;
+  border-bottom-color: ${COLORS.background};
+`;
+
+const SettingLabel = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.body}px;
+  flex: 1;
+`;
+
+const HistoryItem = styled.View`
+  background-color: ${COLORS.background};
+  border-radius: 8px;
+  padding: ${SPACING.md}px;
+  margin-bottom: ${SPACING.sm}px;
+  flex-direction: row;
+  align-items: center;
+`;
+
+const HistoryIcon = styled.View<{ eventType: 'enter' | 'exit' }>`
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background-color: ${(props: { eventType: 'enter' | 'exit' }) => props.eventType === 'enter' ? COLORS.statusGreen : COLORS.statusRed}33;
+  align-items: center;
+  justify-content: center;
+  margin-right: ${SPACING.md}px;
+`;
+
+const HistoryInfo = styled.View`
+  flex: 1;
+`;
+
+const HistoryText = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.body}px;
+  font-weight: 600;
+  margin-bottom: ${SPACING.xs}px;
+`;
+
+const HistoryTime = styled.Text`
+  color: ${COLORS.textPrimary}99;
+  font-size: ${TYPOGRAPHY.small}px;
+`;
+
 interface LocationData {
   latitude: number;
   longitude: number;
@@ -147,12 +256,29 @@ interface AddressData {
 type LocationStatus = 'idle' | 'loading' | 'success' | 'error';
 
 const LocationScreen: React.FC = () => {
+  const { state, updateProximitySettings, dispatch } = useHomeLocation();
+  const { homeLocations, proximitySettings, locationHistory } = state;
+  
+  const {
+    currentLocation,
+    isWatching,
+    error: proximityError,
+    detectionState,
+    startWatching,
+    stopWatching,
+    getCurrentLocation: getProximityLocation,
+    calculateDistance,
+  } = useProximityDetection({
+    enableWatching: proximitySettings.isEnabled,
+  });
+
   const [location, setLocation] = useState<LocationData | null>(null);
   const [address, setAddress] = useState<AddressData | null>(null);
   const [status, setStatus] = useState<LocationStatus>('idle');
   const [permissionStatus, setPermissionStatus] = useState<Location.PermissionStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [isWatching, setIsWatching] = useState(false);
+  const [showProximityModal, setShowProximityModal] = useState(false);
+  const [activeSection, setActiveSection] = useState<'location' | 'proximity' | 'settings' | 'history'>('location');
   const watchSubscription = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
@@ -163,6 +289,16 @@ const LocationScreen: React.FC = () => {
       }
     };
   }, []);
+  // Show proximity modal when entering home area
+  useEffect(() => {
+    if (detectionState.isNearHome && 
+        detectionState.nearestHomeLocation && 
+        proximitySettings.showNotifications &&
+        !detectionState.modalShownForCurrentSession &&
+        !showProximityModal) {
+      setShowProximityModal(true);
+    }
+  }, [detectionState.isNearHome, detectionState.modalShownForCurrentSession, proximitySettings.showNotifications, showProximityModal]);
 
   const checkLocationPermission = async () => {
     try {
@@ -205,7 +341,6 @@ const LocationScreen: React.FC = () => {
     try {      setStatus('loading');
       setErrorMessage('');
 
-      // Check if location services are enabled
       const isEnabled = await Location.hasServicesEnabledAsync();
       if (!isEnabled) {
         throw new Error('Los servicios de ubicación están desactivados');
@@ -227,7 +362,6 @@ const LocationScreen: React.FC = () => {
       setLocation(locationData);
       setStatus('success');
       
-      // Get address
       await getAddressFromCoordinates(locationData.latitude, locationData.longitude);
       
     } catch (error: any) {
@@ -263,7 +397,6 @@ const LocationScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error getting address:', error);
-      // Don't show error for address, it's optional
     }
   };
 
@@ -273,7 +406,6 @@ const LocationScreen: React.FC = () => {
         watchSubscription.current.remove();
       }
 
-      setIsWatching(true);
       watchSubscription.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
@@ -294,7 +426,6 @@ const LocationScreen: React.FC = () => {
       );
     } catch (error) {
       console.error('Error watching location:', error);
-      setIsWatching(false);
     }
   };
 
@@ -303,7 +434,6 @@ const LocationScreen: React.FC = () => {
       watchSubscription.current.remove();
       watchSubscription.current = null;
     }
-    setIsWatching(false);
   };
 
   const copyCoordinates = async () => {
@@ -345,6 +475,7 @@ const LocationScreen: React.FC = () => {
       level === 'medium' ? 'Buena' : 'Baja'
     }`;
   };
+
   const getStatusInfo = () => {
     switch (status) {
       case 'loading':
@@ -374,6 +505,60 @@ const LocationScreen: React.FC = () => {
     }
   };
 
+  const formatDistance = (distance: number): string => {
+    if (distance < 1000) {
+      return `${Math.round(distance)}m`;
+    } else {
+      return `${(distance / 1000).toFixed(1)}km`;
+    }
+  };
+
+  const formatDateTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+  const handleEnterHome = () => {
+    setShowProximityModal(false);
+    
+    // Mark modal as shown for current session
+    dispatch({
+      type: 'SET_DETECTION_STATE',
+      payload: {
+        modalShownForCurrentSession: true,
+      },
+    });
+    
+    // Here you could trigger home automation
+    Alert.alert('Bienvenido a casa', 'Dispositivos activados automáticamente');
+  };
+
+  const handleCloseModal = () => {
+    setShowProximityModal(false);
+    
+    // Mark modal as shown for current session even if dismissed
+    dispatch({
+      type: 'SET_DETECTION_STATE',
+      payload: {
+        modalShownForCurrentSession: true,
+      },
+    });
+  };
+
+  const toggleProximityDetection = async (enabled: boolean) => {
+    await updateProximitySettings({ isEnabled: enabled });
+    if (enabled) {
+      startWatching();
+    } else {
+      stopWatching();
+    }
+  };
+
   if (permissionStatus !== Location.PermissionStatus.GRANTED) {
     return (
       <Container contentContainerStyle={{ flex: 1, justifyContent: 'center' }}>
@@ -398,102 +583,324 @@ const LocationScreen: React.FC = () => {
   }
 
   const statusInfo = getStatusInfo();
-
   return (
-    <Container>
-      <StatusCard>
-        <StatusIcon status={statusInfo.status}>
-          <MaterialIcons 
-            name={statusInfo.icon} 
-            size={30} 
-            color="white" 
-          />
-        </StatusIcon>
-        <StatusText>{statusInfo.text}</StatusText>
-      </StatusCard>      {location && (
-        <>
+    <>
+      <Container>
+        {/* Section Navigation */}
+        <CoordinatesCard>
+          <CardTitle>Ubicación y Proximidad</CardTitle>
+          <View style={{ flexDirection: 'row', marginBottom: SPACING.md }}>
+            {[
+              { key: 'location', label: 'Ubicación', icon: 'my-location' },
+              { key: 'proximity', label: 'Proximidad', icon: 'home' },
+              { key: 'settings', label: 'Config', icon: 'settings' },
+              { key: 'history', label: 'Historial', icon: 'history' },
+            ].map((section) => (
+              <TouchableOpacity
+                key={section.key}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  padding: SPACING.sm,
+                  backgroundColor: activeSection === section.key ? COLORS.accent + '33' : 'transparent',
+                  borderRadius: 8,
+                  marginHorizontal: SPACING.xs,
+                }}
+                onPress={() => setActiveSection(section.key as any)}
+              >
+                <MaterialIcons 
+                  name={section.icon as any} 
+                  size={20} 
+                  color={activeSection === section.key ? COLORS.accent : COLORS.textPrimary + '99'} 
+                />
+                <Text 
+                  style={{
+                    color: activeSection === section.key ? COLORS.accent : COLORS.textPrimary + '99',
+                    fontSize: TYPOGRAPHY.small,
+                    marginTop: SPACING.xs,
+                  }}
+                >
+                  {section.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </CoordinatesCard>
+
+        {/* Location Section */}
+        {activeSection === 'location' && (
+          <>
+            <StatusCard>
+              <StatusIcon status={statusInfo.status}>
+                <MaterialIcons 
+                  name={statusInfo.icon} 
+                  size={30} 
+                  color="white" 
+                />
+              </StatusIcon>
+              <StatusText>{statusInfo.text}</StatusText>
+            </StatusCard>
+
+            {location && (
+              <>
+                <CoordinatesCard>
+                  <CardTitle>Coordenadas</CardTitle>
+                  <CoordinateRow>
+                    <CoordinateLabel>Latitud:</CoordinateLabel>
+                    <CoordinateValue>{location.latitude.toFixed(6)}</CoordinateValue>
+                    <TouchableOpacity onPress={copyCoordinates}>
+                      <MaterialIcons name="content-copy" size={20} color={COLORS.accent} />
+                    </TouchableOpacity>
+                  </CoordinateRow>
+                  <CoordinateRow>
+                    <CoordinateLabel>Longitud:</CoordinateLabel>
+                    <CoordinateValue>{location.longitude.toFixed(6)}</CoordinateValue>
+                    <TouchableOpacity onPress={copyCoordinates}>
+                      <MaterialIcons name="content-copy" size={20} color={COLORS.accent} />
+                    </TouchableOpacity>
+                  </CoordinateRow>
+                  {location.altitude !== null && (
+                    <CoordinateRow>
+                      <CoordinateLabel>Altitud:</CoordinateLabel>
+                      <CoordinateValue>{location.altitude.toFixed(1)}m</CoordinateValue>
+                      <View style={{ width: 20 }} />
+                    </CoordinateRow>
+                  )}
+                  {location.speed !== null && location.speed > 0 && (
+                    <CoordinateRow>
+                      <CoordinateLabel>Velocidad:</CoordinateLabel>
+                      <CoordinateValue>{(location.speed * 3.6).toFixed(1)} km/h</CoordinateValue>
+                      <View style={{ width: 20 }} />
+                    </CoordinateRow>
+                  )}
+                  <AccuracyIndicator>
+                    <AccuracyDot level={getAccuracyLevel(location.accuracy)} />
+                    <AccuracyText>{getAccuracyText(location.accuracy)}</AccuracyText>
+                  </AccuracyIndicator>
+                </CoordinatesCard>
+
+                {address && (
+                  <AddressCard>
+                    <CardTitle>Dirección</CardTitle>
+                    <AddressText>
+                      {[address.street, address.city, address.region, address.country]
+                        .filter(Boolean)
+                        .join(', ')}
+                      {address.postalCode && ` ${address.postalCode}`}
+                    </AddressText>
+                  </AddressCard>
+                )}
+              </>
+            )}
+
+            <ActionButton onPress={getCurrentLocation} disabled={status === 'loading'}>
+              <MaterialIcons 
+                name="my-location" 
+                size={20} 
+                color={COLORS.background} 
+              />
+              <ButtonText>Actualizar Ubicación</ButtonText>
+            </ActionButton>
+
+            {location && (
+              <>
+                <ActionButton 
+                  variant="secondary" 
+                  onPress={watchSubscription.current ? stopWatchingLocation : startWatchingLocation}
+                >
+                  <MaterialIcons 
+                    name={watchSubscription.current ? "location-disabled" : "track-changes"} 
+                    size={20} 
+                    color={COLORS.textPrimary} 
+                  />
+                  <ButtonText variant="secondary">
+                    {watchSubscription.current ? 'Detener Seguimiento' : 'Seguimiento en Tiempo Real'}
+                  </ButtonText>
+                </ActionButton>
+
+                <ActionButton variant="secondary" onPress={shareLocation}>
+                  <MaterialIcons name="share" size={20} color={COLORS.textPrimary} />
+                  <ButtonText variant="secondary">Compartir Ubicación</ButtonText>
+                </ActionButton>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Proximity Section */}
+        {activeSection === 'proximity' && (
+          <>
+            <ProximityCard>
+              <ProximityHeader>
+                <ProximityTitle>Detección de Proximidad</ProximityTitle>
+                <Switch
+                  value={proximitySettings.isEnabled}
+                  onValueChange={toggleProximityDetection}
+                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
+                  thumbColor={COLORS.textPrimary}
+                />
+              </ProximityHeader>
+
+              <ProximityStatus isNear={detectionState.isNearHome}>
+                {detectionState.isNearHome ? 
+                  `¡Estás cerca de casa! (${detectionState.currentDistance ? formatDistance(detectionState.currentDistance) : 'calculando...'})` :
+                  `Fuera del área de casa ${detectionState.currentDistance ? `(${formatDistance(detectionState.currentDistance)})` : ''}`
+                }
+              </ProximityStatus>
+
+              <View style={{ marginBottom: SPACING.md }}>
+                <Text style={{ color: COLORS.textPrimary + '99', fontSize: TYPOGRAPHY.small, marginBottom: SPACING.sm }}>
+                  Estado del monitoreo: {isWatching ? 'Activo' : 'Inactivo'}
+                </Text>
+                {detectionState.lastDetectionTime && (
+                  <Text style={{ color: COLORS.textPrimary + '99', fontSize: TYPOGRAPHY.small }}>
+                    Última detección: {formatDateTime(detectionState.lastDetectionTime)}
+                  </Text>
+                )}
+              </View>
+
+              {homeLocations.length === 0 ? (
+                <Text style={{ color: COLORS.textPrimary + '99', textAlign: 'center', padding: SPACING.lg }}>
+                  No hay ubicaciones de casa configuradas
+                </Text>
+              ) : (
+                <>
+                  <Text style={{ color: COLORS.textPrimary, fontSize: TYPOGRAPHY.body, fontWeight: '600', marginBottom: SPACING.md }}>
+                    Ubicaciones de Casa ({homeLocations.filter(loc => loc.isActive).length} activas)
+                  </Text>
+                  
+                  {homeLocations.map((homeLocation) => {
+                    const distance = currentLocation ? 
+                      calculateDistance(currentLocation, homeLocation.coordinates) : null;
+                    const isNear = distance ? distance <= homeLocation.radius : false;
+                    
+                    return (
+                      <HomeLocationItem key={homeLocation.id}>
+                        <HomeLocationInfo>
+                          <HomeLocationName>{homeLocation.name}</HomeLocationName>
+                          <HomeLocationDistance isNear={isNear}>
+                            {distance ? formatDistance(distance) : 'Calculando...'} • Radio: {homeLocation.radius}m
+                            {!homeLocation.isActive && ' • Inactiva'}                          
+                            </HomeLocationDistance>
+                        </HomeLocationInfo>
+                        <View style={{ alignItems: 'center' }}>
+                          <MaterialIcons 
+                            name={isNear ? "home" : "location-city"} 
+                            size={24} 
+                            color={isNear ? COLORS.statusGreen : COLORS.textPrimary + '99'} 
+                          />
+                        </View>
+                      </HomeLocationItem>
+                    );
+                  })}
+                </>
+              )}
+            </ProximityCard>
+          </>        
+        )}
+        
+        {/* Settings Section */}
+        {activeSection === 'settings' && (
           <CoordinatesCard>
-            <CardTitle>Coordenadas</CardTitle>
-            <CoordinateRow>
-              <CoordinateLabel>Latitud:</CoordinateLabel>
-              <CoordinateValue>{location.latitude.toFixed(6)}</CoordinateValue>
-              <TouchableOpacity onPress={copyCoordinates}>
-                <MaterialIcons name="content-copy" size={20} color={COLORS.accent} />
-              </TouchableOpacity>
-            </CoordinateRow>
-            <CoordinateRow>
-              <CoordinateLabel>Longitud:</CoordinateLabel>
-              <CoordinateValue>{location.longitude.toFixed(6)}</CoordinateValue>
-              <TouchableOpacity onPress={copyCoordinates}>
-                <MaterialIcons name="content-copy" size={20} color={COLORS.accent} />
-              </TouchableOpacity>
-            </CoordinateRow>
-            {location.altitude !== null && (
-              <CoordinateRow>
-                <CoordinateLabel>Altitud:</CoordinateLabel>
-                <CoordinateValue>{location.altitude.toFixed(1)}m</CoordinateValue>
-                <View style={{ width: 20 }} />
-              </CoordinateRow>
+            <CardTitle>Configuración de Proximidad</CardTitle>
+            
+            <SettingsSection>
+              <SettingRow>
+                <SettingLabel>Mostrar notificaciones</SettingLabel>
+                <Switch
+                  value={proximitySettings.showNotifications}
+                  onValueChange={(value) => updateProximitySettings({ showNotifications: value })}
+                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
+                  thumbColor={COLORS.textPrimary}
+                />
+              </SettingRow>
+
+              <SettingRow>
+                <SettingLabel>Activar dispositivos automáticamente</SettingLabel>
+                <Switch
+                  value={proximitySettings.autoTriggerDevices}
+                  onValueChange={(value) => updateProximitySettings({ autoTriggerDevices: value })}
+                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
+                  thumbColor={COLORS.textPrimary}
+                />
+              </SettingRow>
+
+              <SettingRow>
+                <SettingLabel>Sonido de notificación</SettingLabel>
+                <Switch
+                  value={proximitySettings.notificationSound}
+                  onValueChange={(value) => updateProximitySettings({ notificationSound: value })}
+                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
+                  thumbColor={COLORS.textPrimary}
+                />
+              </SettingRow>
+
+              <SettingRow>
+                <SettingLabel>Vibración</SettingLabel>
+                <Switch
+                  value={proximitySettings.vibration}
+                  onValueChange={(value) => updateProximitySettings({ vibration: value })}
+                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
+                  thumbColor={COLORS.textPrimary}
+                />
+              </SettingRow>            
+              </SettingsSection>
+            </CoordinatesCard>
+        )}
+        
+        {/* History Section */}
+        {activeSection === 'history' && (
+          <CoordinatesCard>
+            <CardTitle>Historial de Proximidad</CardTitle>
+            
+            {locationHistory.length === 0 ? (
+              <Text style={{ color: COLORS.textPrimary + '99', textAlign: 'center', padding: SPACING.lg }}>
+                No hay historial disponible
+              </Text>
+            ) : (
+              <>
+                {locationHistory.slice(0, 10).map((entry) => {
+                  const homeLocation = homeLocations.find(loc => loc.id === entry.homeLocationId);
+                  return (
+                    <HistoryItem key={entry.id}>
+                      <HistoryIcon eventType={entry.eventType}>
+                        <MaterialIcons 
+                          name={entry.eventType === 'enter' ? "home" : "exit-to-app"} 
+                          size={16} 
+                          color={entry.eventType === 'enter' ? COLORS.statusGreen : COLORS.statusRed} 
+                        />
+                      </HistoryIcon>
+                      <HistoryInfo>
+                        <HistoryText>
+                          {entry.eventType === 'enter' ? 'Llegada a' : 'Salida de'} {homeLocation?.name || 'Casa'}
+                        </HistoryText>
+                        <HistoryTime>
+                          {formatDateTime(entry.timestamp)} • {formatDistance(entry.distance)}
+                        </HistoryTime>
+                      </HistoryInfo>
+                    </HistoryItem>
+                  );
+                })}
+                
+                {locationHistory.length > 10 && (
+                  <Text style={{ color: COLORS.textPrimary + '99', textAlign: 'center', fontSize: TYPOGRAPHY.small, marginTop: SPACING.md }}>
+                    Mostrando las últimas 10 entradas de {locationHistory.length} total
+                  </Text>
+                )}
+              </>
             )}
-            {location.speed !== null && location.speed > 0 && (
-              <CoordinateRow>
-                <CoordinateLabel>Velocidad:</CoordinateLabel>
-                <CoordinateValue>{(location.speed * 3.6).toFixed(1)} km/h</CoordinateValue>
-                <View style={{ width: 20 }} />
-              </CoordinateRow>
-            )}
-            <AccuracyIndicator>
-              <AccuracyDot level={getAccuracyLevel(location.accuracy)} />
-              <AccuracyText>{getAccuracyText(location.accuracy)}</AccuracyText>
-            </AccuracyIndicator>
           </CoordinatesCard>
+        )}
+      </Container>
 
-          {address && (
-            <AddressCard>
-              <CardTitle>Dirección</CardTitle>
-              <AddressText>
-                {[address.street, address.city, address.region, address.country]
-                  .filter(Boolean)
-                  .join(', ')}
-                {address.postalCode && ` ${address.postalCode}`}
-              </AddressText>
-            </AddressCard>
-          )}
-        </>
-      )}
-
-      <ActionButton onPress={getCurrentLocation} disabled={status === 'loading'}>
-        <MaterialIcons 
-          name="my-location" 
-          size={20} 
-          color={COLORS.background} 
-        />
-        <ButtonText>Actualizar Ubicación</ButtonText>
-      </ActionButton>
-
-      {location && (
-        <>
-          <ActionButton 
-            variant="secondary" 
-            onPress={isWatching ? stopWatchingLocation : startWatchingLocation}
-          >
-            <MaterialIcons 
-              name={isWatching ? "location-disabled" : "track-changes"} 
-              size={20} 
-              color={COLORS.textPrimary} 
-            />
-            <ButtonText variant="secondary">
-              {isWatching ? 'Detener Seguimiento' : 'Seguimiento en Tiempo Real'}
-            </ButtonText>
-          </ActionButton>
-
-          <ActionButton variant="secondary" onPress={shareLocation}>
-            <MaterialIcons name="share" size={20} color={COLORS.textPrimary} />
-            <ButtonText variant="secondary">Compartir Ubicación</ButtonText>
-          </ActionButton>
-        </>
-      )}
-    </Container>
+      <ProximityModal
+        visible={showProximityModal}
+        homeLocation={detectionState.nearestHomeLocation}
+        distance={detectionState.currentDistance || 0}
+        onEnterHome={handleEnterHome}
+        onClose={handleCloseModal}
+      />
+    </>
   );
 };
 
