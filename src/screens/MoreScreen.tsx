@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import styled from 'styled-components/native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../theme';
 import { useHomeLocation } from '../contexts/HomeLocationContext';
+import { useAuth } from '../contexts/AuthContext';
 import HomeSetupScreen from './HomeSetupScreen';
 
 const Container = styled.View`
@@ -256,6 +257,7 @@ const MoreScreen = () => {
     const navigation = useNavigation();
     const { state } = useHomeLocation();
     const { homeLocations } = state;
+    const { signOut, user } = useAuth();
     
     const [darkMode, setDarkMode] = useState(true);
     const [nightMode, setNightMode] = useState(false);
@@ -268,6 +270,28 @@ const MoreScreen = () => {
         issueType: 'Technical',
         description: ''
     });
+
+    const handleLogout = () => {
+        Alert.alert(
+            'Cerrar Sesión',
+            '¿Estás seguro de que quieres cerrar sesión?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                { 
+                    text: 'Cerrar Sesión', 
+                    style: 'destructive', 
+                    onPress: async () => {
+                        try {
+                            await signOut();
+                        } catch (error) {
+                            console.error('Error logging out:', error);
+                            Alert.alert('Error', 'No se pudo cerrar sesión');
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const handleDeleteAccount = () => {
         Alert.alert(
@@ -409,21 +433,24 @@ const MoreScreen = () => {
                     <ActionButton onPress={handleSubmitContact} style={{ marginTop: SPACING.md }}>
                         <ButtonText>Submit</ButtonText>
                     </ActionButton>
-                </FormContainer>
-
+                </FormContainer>                
                 <SectionTitle>Profile</SectionTitle>
                 <ProfileCard>
                     <ProfileAvatar>
-                        <AvatarText>P</AvatarText>
+                        <AvatarText>{user?.full_name?.charAt(0).toUpperCase() || 'U'}</AvatarText>
                     </ProfileAvatar>
-                    <ProfileName>John Doe</ProfileName>
-                    <ProfileDetail>john.doe@example.com</ProfileDetail>
-                    <ProfileDetail>+1 (555) 123-4567</ProfileDetail>
-                    <ProfileDetail>Home Group • Admin</ProfileDetail>
-                    <ProfileDetail>Member since March 2024</ProfileDetail>
-                    </ProfileCard>
+                    <ProfileName>{user?.full_name || 'Usuario'}</ProfileName>
+                    <ProfileDetail>{user?.email || ''}</ProfileDetail>
+                    <ProfileDetail>Rol: {user?.role || 'USER'}</ProfileDetail>
+                </ProfileCard>
+                
                 <ActionButton accent>
                     <ButtonText dark>Edit Profile</ButtonText>
+                </ActionButton>
+
+                <ActionButton onPress={handleLogout}>
+                    <MaterialIcons name="logout" size={20} color={COLORS.textPrimary} style={{ marginRight: SPACING.sm }} />
+                    <ButtonText>Cerrar Sesión</ButtonText>
                 </ActionButton>
 
                 <ActionButton destructive onPress={handleDeleteAccount}>
