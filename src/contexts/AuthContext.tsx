@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { authService, AuthUser, Profile } from '../services/authService'
+import { apiService } from '../services/apiService'
 import { Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
@@ -69,6 +70,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           avatar_url: userProfile.avatar_url,
           role: userProfile.role
         })
+
+        // Registrar dispositivo automáticamente cuando se carga el perfil
+        setTimeout(async () => {
+          try {
+            await apiService.registerDevice()
+          } catch (error) {
+            console.warn('Failed to register device:', error)
+          }
+        }, 500) // Delay menor porque el perfil ya está cargado
       }
     } catch (error) {
       console.error('Error loading user profile:', error)

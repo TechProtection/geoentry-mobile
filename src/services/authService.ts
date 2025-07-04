@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/supabase-client'
+import { apiService } from './apiService'
 
 export interface AuthUser {
   id: string
@@ -51,6 +52,15 @@ export const authService = {
         if (profileError) {
           console.error('Error creating profile:', profileError)
           // No lanzamos error aquí porque el usuario ya fue creado
+        } else {
+          // Registrar dispositivo automáticamente después del registro exitoso
+          setTimeout(async () => {
+            try {
+              await apiService.registerDevice()
+            } catch (error) {
+              console.warn('Failed to register device after signup:', error)
+            }
+          }, 1000) // Delay de 1 segundo para asegurar que el perfil esté creado
         }
       }
 
@@ -69,6 +79,18 @@ export const authService = {
       })
 
       if (error) throw error
+
+      // Registrar dispositivo automáticamente después del login exitoso
+      if (data.session) {
+        // Ejecutar en background para no bloquear el login
+        setTimeout(async () => {
+          try {
+            await apiService.registerDevice()
+          } catch (error) {
+            console.warn('Failed to register device after login:', error)
+          }
+        }, 1000) // Delay de 1 segundo para asegurar que el login esté completo
+      }
 
       return { data, error: null }
     } catch (error: any) {

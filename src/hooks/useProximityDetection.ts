@@ -118,7 +118,9 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
 
   const watchSubscription = useRef<Location.LocationSubscription | null>(null);
   const proximityCheckInterval = useRef<NodeJS.Timeout | null>(null);
-  const lastKnownProximityState = useRef<boolean>(false);  // Proximity event callbacks
+  const lastKnownProximityState = useRef<boolean>(false);
+
+  // Proximity event callbacks
   const onProximityEnter = useCallback(async (event: ProximityEvent) => {
     console.log('Proximity Enter:', event);
     
@@ -144,6 +146,8 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
         deviceId,
         userId,
       });
+      
+      console.log('Proximity enter event sent successfully to REST API');
     } catch (error) {
       console.error('Error sending proximity enter event to API:', error);
     }
@@ -159,7 +163,9 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
         modalShownForCurrentSession: false, // Reset to allow modal to show again
       },
     });
-  }, [addHistoryEntry, dispatch]);const onProximityExit = useCallback(async (event: ProximityEvent) => {
+  }, [addHistoryEntry, dispatch]);
+
+  const onProximityExit = useCallback(async (event: ProximityEvent) => {
     console.log('Proximity Exit:', event);
     
     // Add history entry
@@ -167,7 +173,9 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
       homeLocationId: event.homeLocation.id,
       eventType: 'exit',
       distance: event.distance,
-    });    // Send event to API
+    });
+
+    // Send event to API
     try {
       const deviceId = await deviceService.getDeviceId();
       const userId = await deviceService.getUserId();
@@ -182,6 +190,8 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
         deviceId,
         userId,
       });
+      
+      console.log('Proximity exit event sent successfully to REST API');
     } catch (error) {
       console.error('Error sending proximity exit event to API:', error);
     }
