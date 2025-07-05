@@ -593,8 +593,6 @@ const LocationScreen: React.FC = () => {
             {[
               { key: 'location', label: 'Ubicación', icon: 'my-location' },
               { key: 'proximity', label: 'Proximidad', icon: 'home' },
-              { key: 'settings', label: 'Config', icon: 'settings' },
-              { key: 'history', label: 'Historial', icon: 'history' },
             ].map((section) => (
               <TouchableOpacity
                 key={section.key}
@@ -797,99 +795,6 @@ const LocationScreen: React.FC = () => {
               )}
             </ProximityCard>
           </>        
-        )}
-        
-        {/* Settings Section */}
-        {activeSection === 'settings' && (
-          <CoordinatesCard>
-            <CardTitle>Configuración de Proximidad</CardTitle>
-            
-            <SettingsSection>
-              <SettingRow>
-                <SettingLabel>Mostrar notificaciones</SettingLabel>
-                <Switch
-                  value={proximitySettings.showNotifications}
-                  onValueChange={(value) => updateProximitySettings({ showNotifications: value })}
-                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
-                  thumbColor={COLORS.textPrimary}
-                />
-              </SettingRow>
-
-              <SettingRow>
-                <SettingLabel>Activar dispositivos automáticamente</SettingLabel>
-                <Switch
-                  value={proximitySettings.autoTriggerDevices}
-                  onValueChange={(value) => updateProximitySettings({ autoTriggerDevices: value })}
-                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
-                  thumbColor={COLORS.textPrimary}
-                />
-              </SettingRow>
-
-              <SettingRow>
-                <SettingLabel>Sonido de notificación</SettingLabel>
-                <Switch
-                  value={proximitySettings.notificationSound}
-                  onValueChange={(value) => updateProximitySettings({ notificationSound: value })}
-                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
-                  thumbColor={COLORS.textPrimary}
-                />
-              </SettingRow>
-
-              <SettingRow>
-                <SettingLabel>Vibración</SettingLabel>
-                <Switch
-                  value={proximitySettings.vibration}
-                  onValueChange={(value) => updateProximitySettings({ vibration: value })}
-                  trackColor={{ false: COLORS.secondary, true: COLORS.accent }}
-                  thumbColor={COLORS.textPrimary}
-                />
-              </SettingRow>            
-              </SettingsSection>
-            </CoordinatesCard>
-        )}
-        
-        {/* History Section */}
-        {activeSection === 'history' && (
-          <CoordinatesCard>
-            <CardTitle>Historial de Proximidad</CardTitle>
-            
-            {locationHistory.length === 0 ? (
-              <Text style={{ color: COLORS.textPrimary + '99', textAlign: 'center', padding: SPACING.lg }}>
-                No hay historial disponible
-              </Text>
-            ) : (
-              <>
-                {locationHistory.slice(0, 10).map((entry) => {
-                  const homeLocation = homeLocations.find(loc => loc.id === entry.homeLocationId);
-                  return (
-                    <HistoryItem key={entry.id}>
-                      <HistoryIcon eventType={entry.eventType}>
-                        <MaterialIcons 
-                          name={entry.eventType === 'enter' ? "home" : "exit-to-app"} 
-                          size={16} 
-                          color={entry.eventType === 'enter' ? COLORS.statusGreen : COLORS.statusRed} 
-                        />
-                      </HistoryIcon>
-                      <HistoryInfo>
-                        <HistoryText>
-                          {entry.eventType === 'enter' ? 'Llegada a' : 'Salida de'} {homeLocation?.name || 'Casa'}
-                        </HistoryText>
-                        <HistoryTime>
-                          {formatDateTime(entry.timestamp)} • {formatDistance(entry.distance)}
-                        </HistoryTime>
-                      </HistoryInfo>
-                    </HistoryItem>
-                  );
-                })}
-                
-                {locationHistory.length > 10 && (
-                  <Text style={{ color: COLORS.textPrimary + '99', textAlign: 'center', fontSize: TYPOGRAPHY.small, marginTop: SPACING.md }}>
-                    Mostrando las últimas 10 entradas de {locationHistory.length} total
-                  </Text>
-                )}
-              </>
-            )}
-          </CoordinatesCard>
         )}
       </Container>
 
