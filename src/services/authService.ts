@@ -50,7 +50,6 @@ export const authService = {
           ])
 
         if (profileError) {
-          console.error('Error creating profile:', profileError)
           // No lanzamos error aquí porque el usuario ya fue creado
         } else {
           // Registrar dispositivo automáticamente después del registro exitoso

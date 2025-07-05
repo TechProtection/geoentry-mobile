@@ -9,7 +9,7 @@ import { useDevices, getDeviceName } from '../hooks/useDevices';
 const Container = styled.View`
   flex: 1;
   background-color: ${COLORS.background};
-  padding: ${SPACING.lg}px;
+  padding: ${SPACING.md}px;
 `;
 
 const Header = styled.View`
@@ -86,17 +86,23 @@ const EventsTitle = styled.Text`
 const EventItem = styled.View`
   background-color: ${COLORS.background};
   border-radius: 12px;
-  padding: ${SPACING.md}px;
-  margin-bottom: ${SPACING.sm}px;
+  padding: ${SPACING.lg}px;
+  margin-bottom: ${SPACING.md}px;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
+  min-height: 80px;
 `;
 
 const EventIconContainer = styled.View<{ eventType: 'enter' | 'exit' }>`
   background-color: ${({ eventType }: { eventType: 'enter' | 'exit' }) => eventType === 'enter' ? COLORS.statusGreen + '20' : COLORS.statusRed + '20'};
-  border-radius: 20px;
-  padding: ${SPACING.sm}px;
-  margin-right: ${SPACING.md}px;
+  border-radius: 24px;
+  padding: ${SPACING.md}px;
+  margin-right: ${SPACING.lg}px;
+  margin-top: ${SPACING.xs}px;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
 `;
 
 const EventInfo = styled.View`
@@ -106,14 +112,16 @@ const EventInfo = styled.View`
 const EventHeader = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-bottom: ${SPACING.xs}px;
+  margin-bottom: ${SPACING.md}px;
+  flex-wrap: wrap;
 `;
 
 const EventBadge = styled.View<{ eventType: 'enter' | 'exit' }>`
   background-color: ${({ eventType }: { eventType: 'enter' | 'exit' }) => eventType === 'enter' ? COLORS.statusGreen : COLORS.statusRed};
-  border-radius: 12px;
-  padding: ${SPACING.xs}px ${SPACING.sm}px;
-  margin-right: ${SPACING.sm}px;
+  border-radius: 16px;
+  padding: ${SPACING.sm}px ${SPACING.md}px;
+  margin-right: ${SPACING.md}px;
+  margin-bottom: ${SPACING.xs}px;
 `;
 
 const EventBadgeText = styled.Text`
@@ -126,39 +134,49 @@ const EventDevice = styled.Text`
   color: ${COLORS.textPrimary};
   font-size: ${TYPOGRAPHY.body}px;
   font-weight: 600;
+  flex: 1;
+  margin-bottom: ${SPACING.xs}px;
 `;
 
 const EventDetails = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-top: ${SPACING.xs}px;
+  margin-top: ${SPACING.sm}px;
+  flex-wrap: wrap;
 `;
 
 const EventLocation = styled.Text`
   color: ${COLORS.textPrimary}99;
   font-size: ${TYPOGRAPHY.small}px;
-  margin-right: ${SPACING.md}px;
+  margin-right: ${SPACING.lg}px;
   flex: 1;
+  min-width: 120px;
+  margin-bottom: ${SPACING.xs}px;
 `;
 
 const EventDistance = styled.Text`
   color: ${COLORS.textPrimary}99;
   font-size: ${TYPOGRAPHY.small}px;
+  margin-bottom: ${SPACING.xs}px;
 `;
 
 const EventTime = styled.View`
   align-items: flex-end;
+  justify-content: flex-start;
+  min-width: 80px;
+  margin-top: ${SPACING.xs}px;
 `;
 
 const EventDate = styled.Text`
   color: ${COLORS.textPrimary};
-  font-size: ${TYPOGRAPHY.body}px;
+  font-size: ${TYPOGRAPHY.small}px;
   font-weight: 600;
+  margin-bottom: ${SPACING.xs}px;
 `;
 
 const EventTimeText = styled.Text`
   color: ${COLORS.textPrimary}99;
-  font-size: ${TYPOGRAPHY.small}px;
+  font-size: ${TYPOGRAPHY.micro}px;
 `;
 
 const EmptyState = styled.View`
@@ -242,7 +260,7 @@ const EventsScreen = () => {
         <EventIconContainer eventType={eventType}>
           <MaterialIcons
             name={eventType === 'enter' ? 'arrow-upward' : 'arrow-downward'}
-            size={20}
+            size={24}
             color={eventType === 'enter' ? COLORS.statusGreen : COLORS.statusRed}
           />
         </EventIconContainer>
@@ -252,15 +270,16 @@ const EventsScreen = () => {
             <EventBadge eventType={eventType}>
               <EventBadgeText>{getEventTypeText(item.type)}</EventBadgeText>
             </EventBadge>
-            <EventDevice>{deviceName}</EventDevice>
           </EventHeader>
+          
+          <EventDevice>{deviceName}</EventDevice>
           
           <EventDetails>
             <EventLocation>
               <MaterialIcons name="place" size={14} color={COLORS.textPrimary + '99'} />
               {' '}{item.home_location_name}
             </EventLocation>
-            <EventDistance>📍 {item.distance}m</EventDistance>
+            <EventDistance>📍 {Math.round(item.distance)}m</EventDistance>
           </EventDetails>
         </EventInfo>
         
@@ -335,7 +354,7 @@ const EventsScreen = () => {
             </EmptyStateText>
           </EmptyState>
         }
-        contentContainerStyle={{ paddingBottom: SPACING.xl }}
+        contentContainerStyle={{ paddingBottom: SPACING.xl * 2 }}
       />
     </Container>
   );

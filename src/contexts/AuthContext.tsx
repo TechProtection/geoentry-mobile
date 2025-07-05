@@ -40,7 +40,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Escuchar cambios de autenticación
     const { data: { subscription } } = authService.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email)
         setSession(session)
         
         if (session?.user) {

@@ -3,8 +3,8 @@ import { Database } from '../types/supabase';
 import { supabase } from '../supabase/supabase-client';
 import { deviceService } from './deviceService';
 
-//const API_BASE_URL = 'https://geoentry-rest-api.onrender.com/api';
-const API_BASE_URL = 'http://192.168.125.211:3000/api';
+const API_BASE_URL = 'https://geoentry-rest-api.onrender.com/api';
+//const API_BASE_URL = 'http://192.168.125.211:3000/api';
 
 // Tipos basados en la estructura de Supabase
 type LocationRow = Database['public']['Tables']['locations']['Row'];
@@ -71,8 +71,6 @@ class ApiService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
-      console.log('Making API request to:', url);
-      console.log('Request options:', options);
 
       const response = await fetch(url, {
         headers: {
@@ -81,10 +79,6 @@ class ApiService {
         },
         ...options,
       });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
       if (!response.ok) {
         const errorText = await response.text();
         console.error('API Error response:', errorText);
@@ -92,7 +86,6 @@ class ApiService {
       }
 
       const responseText = await response.text();
-      console.log('Raw response text:', responseText);
 
       if (!responseText) {
         return {} as T;
@@ -102,7 +95,6 @@ class ApiService {
         const data = JSON.parse(responseText);
         return data;
       } catch (parseError) {
-        console.error('JSON parse error. Raw response:', responseText);
         throw new Error(`Invalid JSON response: ${responseText}`);
       }
     } catch (error) {
@@ -128,7 +120,6 @@ class ApiService {
       profile_id: userId,
     };
 
-    console.log('Sending location data to API:', apiLocation);
 
     const result = await this.makeRequest<ApiHomeLocation>('/locations', {
       method: 'POST',
@@ -155,7 +146,6 @@ class ApiService {
     try {
       const userId = await this.getCurrentUserId();
       if (!userId) {
-        console.log('User not authenticated, returning empty array');
         return [];
       }
 
@@ -176,7 +166,6 @@ class ApiService {
         createdAt: apiLocation.created_at || new Date().toISOString(),
       }));
     } catch (error) {
-      console.log('Error fetching locations from API, returning empty array:', error);
       return [];
     }
   }
@@ -198,7 +187,6 @@ class ApiService {
       profile_id: userId, // Asegurar que siempre se incluya el user_id
     };
 
-    console.log('Sending location update to API:', apiUpdates);
 
     const result = await this.makeRequest<ApiHomeLocation>(`/locations/${id}`, {
       method: 'PUT',
@@ -234,7 +222,6 @@ class ApiService {
   // Enviar evento de proximidad
   async sendProximityEvent(event: ProximityEvent): Promise<void> {
     try {
-      console.log('Sending proximity event to API:', event);
       
       // Verificar salud de la API primero
       const isApiHealthy = await this.checkApiHealth();
@@ -272,30 +259,19 @@ class ApiService {
       }
         
       // Usar el endpoint correcto
-      console.log(`Sending proximity event to: ${this.proximityEventEndpoint}`);
       await this.makeRequest(this.proximityEventEndpoint, {
         method: 'POST',
         body: JSON.stringify(formattedEvent),
       });
-      console.log(`Proximity event sent successfully:`, event.type);
       
     } catch (error) {
       console.error('Failed to send proximity event to API:', error);
-      console.log('Event details that failed to send:', {
-        type: event.type,
-        homeLocationId: event.homeLocationId,
-        timestamp: event.timestamp,
-        coordinates: event.coordinates,
-        userId: await this.getCurrentUserId(),
-      });
-      // No lanzar error para no interrumpir la funcionalidad local
     }
   }
 
   // Verificar si la API está disponible
   async checkApiHealth(): Promise<boolean> {
     try {
-      console.log('Checking API health...');
       const response = await fetch(`${API_BASE_URL}/health`, {
         method: 'GET',
       });
@@ -334,7 +310,6 @@ class ApiService {
       // Verificar si el dispositivo ya existe
       try {
         await this.makeRequest(`/devices/${deviceId}`, { method: 'GET' });
-        console.log('Device already registered:', deviceId);
         return;
       } catch (error) {
         // Dispositivo no existe, continuar con el registro
@@ -348,17 +323,67 @@ class ApiService {
         profile_id: userId,
       };
 
-      console.log('Registering device:', deviceData);
 
       await this.makeRequest('/devices', {
         method: 'POST',
         body: JSON.stringify(deviceData),
       });
 
-      console.log('Device registered successfully:', deviceId);
     } catch (error) {
       console.error('Failed to register device:', error);
       // No lanzar error para no interrumpir la funcionalidad
+    }
+  }
+
+  // Obtener eventos de proximidad del usuario
+  async getEvents(): Promise<any[]> {
+    try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) {
+        return [];
+      }
+
+      // Obtener eventos del usuario actual
+      const result = await this.makeRequest<any[]>(`/proximity-events/user/${userId}`);
+      
+      return result.map(event => ({
+        id: event.id || Date.now().toString(),
+        type: event.type,
+        latitude: event.latitude,
+        longitude: event.longitude,
+        distance: event.distance,
+        home_location_id: event.home_location_id,
+        home_location_name: event.home_location_name,
+        device_id: event.device_id,
+        user_id: event.user_id,
+        created_at: event.created_at,
+      }));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  // Obtener dispositivos del usuario
+  async getDevices(): Promise<any[]> {
+    try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) {
+        return [];
+      }
+
+      // Obtener dispositivos del usuario actual
+      const result = await this.makeRequest<any[]>(`/devices/user/${userId}`);
+      
+      return result.map(device => ({
+        id: device.id,
+        name: device.name,
+        type: device.type,
+        profile_id: device.profile_id,
+        created_at: device.created_at,
+        updated_at: device.updated_at,
+      }));
+    } catch (error) {
+      return [];
     }
   }
 }
