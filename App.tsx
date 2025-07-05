@@ -4,11 +4,13 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar, SafeAreaView, Platform, View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import styled, { ThemeProvider } from 'styled-components/native';
 import { theme } from './src/theme';
 import { HomeLocationProvider } from './src/contexts/HomeLocationContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { CustomTabBar } from './src/components/CustomTabBar';
 // Import screens
 import HomeScreen from './src/screens/HomeScreen';
 import DevicesScreen from './src/screens/DevicesScreen';
@@ -50,31 +52,8 @@ function AuthStack() {
 function MainTabNavigator() {
     return (
         <Tab.Navigator
+            tabBar={(props) => <CustomTabBar {...props} />}
             screenOptions={{
-                tabBarStyle: {
-                    backgroundColor: theme.COLORS.secondary,
-                    height: Platform.OS === 'android' ? 85 : 85,
-                    borderTopWidth: 1,
-                    borderTopColor: theme.COLORS.background,
-                    paddingBottom: Platform.OS === 'android' ? 15 : 10,
-                    paddingTop: 8,
-                    paddingHorizontal: 12,
-                    elevation: 8,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: -2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 8,
-                },
-                tabBarActiveTintColor: theme.COLORS.accent,
-                tabBarInactiveTintColor: `${theme.COLORS.textPrimary}66`,
-                tabBarLabelStyle: {
-                    fontSize: 10,
-                    fontWeight: '600',
-                    marginTop: 2,
-                },
-                tabBarIconStyle: {
-                    marginTop: 4,
-                },
                 headerStyle: {
                     backgroundColor: theme.COLORS.background,
                     height: 56,
@@ -90,54 +69,42 @@ function MainTabNavigator() {
                 name="Home"
                 component={HomeScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => (
-                        <MaterialIcons name="home" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tab.Screen
-                name="Devices"
-                component={DevicesScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => (
-                        <MaterialIcons name="tv" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tab.Screen
-                name="Stats"
-                component={StatsScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => (
-                        <MaterialIcons name="bar-chart" size={size} color={color} />
-                    ),
+                    title: 'Dashboard',
                 }}
             />
             <Tab.Screen
                 name="Groups"
                 component={GroupsScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => (
-                        <MaterialIcons name="group" size={size} color={color} />
-                    ),
+                    title: 'Locations',
+                }}
+            />
+            <Tab.Screen
+                name="Devices"
+                component={DevicesScreen}
+                options={{
+                    title: 'Devices',
+                }}
+            />
+            <Tab.Screen
+                name="Stats"
+                component={StatsScreen}
+                options={{
+                    title: 'Eventos',
                 }}
             />
             <Tab.Screen
                 name="Location"
                 component={LocationScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => (
-                        <MaterialIcons name="location-on" size={size} color={color} />
-                    ),
+                    title: 'Analíticas',
                 }}
             />
             <Tab.Screen
                 name="More"
                 component={MoreScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => (
-                        <MaterialIcons name="more-horiz" size={size} color={color} />
-                    ),
+                    title: 'Soporte',
                 }}
             />
         </Tab.Navigator>
@@ -167,16 +134,18 @@ function AppNavigator() {
 
 export default function App() {
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaView style={{ flex: 1 }}>
-                <AuthProvider>
-                    <HomeLocationProvider>
-                        <ThemeProvider theme={theme}>
-                            <AppNavigator />
-                        </ThemeProvider>
-                    </HomeLocationProvider>
-                </AuthProvider>
-            </SafeAreaView>
-        </GestureHandlerRootView>
+        <SafeAreaProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <SafeAreaView style={{ flex: 1 }}>
+                    <AuthProvider>
+                        <HomeLocationProvider>
+                            <ThemeProvider theme={theme}>
+                                <AppNavigator />
+                            </ThemeProvider>
+                        </HomeLocationProvider>
+                    </AuthProvider>
+                </SafeAreaView>
+            </GestureHandlerRootView>
+        </SafeAreaProvider>
     );
 }

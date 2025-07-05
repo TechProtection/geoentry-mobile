@@ -34,6 +34,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      device_tracking: {
+        Row: {
+          accuracy: number | null
+          altitude: number | null
+          created_at: string | null
+          device_id: string
+          heading: number | null
+          id: string
+          latitude: number
+          longitude: number
+          speed: number | null
+          timestamp: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          altitude?: number | null
+          created_at?: string | null
+          device_id: string
+          heading?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          speed?: number | null
+          timestamp: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          altitude?: number | null
+          created_at?: string | null
+          device_id?: string
+          heading?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          speed?: number | null
+          timestamp?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_tracking_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devices: {
         Row: {
           created_at: string | null
@@ -238,10 +298,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_devices_latest_location: {
+        Row: {
+          accuracy: number | null
+          altitude: number | null
+          created_at: string | null
+          device_id: string | null
+          device_name: string | null
+          device_type: string | null
+          heading: number | null
+          id: string | null
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          speed: number | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_tracking_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      cleanup_old_tracking_data: {
+        Args: { days_to_keep?: number }
+        Returns: number
+      }
+      get_latest_device_location: {
+        Args: { device_uuid: string }
+        Returns: {
+          id: string
+          device_id: string
+          user_id: string
+          latitude: number
+          longitude: number
+          accuracy: number
+          speed: number
+          heading: number
+          altitude: number
+          location_timestamp: string
+          created_at: string
+        }[]
+      }
     }
     Enums: {
       user_role: "USER" | "ADMIN"

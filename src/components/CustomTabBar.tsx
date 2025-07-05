@@ -1,17 +1,19 @@
 import React from 'react';
-import { View, TouchableOpacity, Animated } from 'react-native';
+import { View, TouchableOpacity, Animated, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import styled from 'styled-components/native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const TabBarContainer = styled.View`
+const TabBarContainer = styled.View<{ bottomInset: number }>`
   flex-direction: row;
-  height: 80px;
+  height: ${({ bottomInset }: { bottomInset: number }) => 70 + bottomInset}px;
   background-color: ${COLORS.secondary};
   border-top-width: 1px;
   border-top-color: ${COLORS.background};
   padding-horizontal: ${SPACING.md}px;
-  padding-vertical: ${SPACING.sm}px;
+  padding-top: ${SPACING.sm}px;
+  padding-bottom: ${({ bottomInset }: { bottomInset: number }) => Math.max(bottomInset, SPACING.md)}px;
   elevation: 8;
   shadow-color: #000;
   shadow-offset: 0px -2px;
@@ -69,17 +71,19 @@ interface CustomTabBarProps {
 }
 
 const tabs: Tab[] = [
-  { name: 'Home', title: 'Inicio', icon: 'home' },
-  { name: 'Devices', title: 'Dispositivos', icon: 'tv', focusedIcon: 'devices' },
-  { name: 'Stats', title: 'Estadísticas', icon: 'bar-chart', focusedIcon: 'analytics' },
-  { name: 'Groups', title: 'Grupos', icon: 'group' },
-  { name: 'Location', title: 'Ubicación', icon: 'location-on', focusedIcon: 'my-location' },
-  { name: 'More', title: 'Más', icon: 'more-horiz', focusedIcon: 'menu' },
+  { name: 'Home', title: 'Dashboard', icon: 'home', focusedIcon: 'home' },
+  { name: 'Groups', title: 'Locations', icon: 'map', focusedIcon: 'map' },
+  { name: 'Devices', title: 'Devices', icon: 'smartphone', focusedIcon: 'smartphone' },
+  { name: 'Stats', title: 'Eventos', icon: 'show-chart', focusedIcon: 'show-chart' },
+  { name: 'Location', title: 'Analíticas', icon: 'analytics', focusedIcon: 'analytics' },
+  { name: 'More', title: 'Soporte', icon: 'help', focusedIcon: 'help' },
 ];
 
 export const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, navigation }) => {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <TabBarContainer>
+    <TabBarContainer bottomInset={insets.bottom}>
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         const tab = tabs.find(t => t.name === route.name);
@@ -126,8 +130,7 @@ export const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, 
             </TabIconContainer>
             <TabLabel isActive={isFocused}>{tab.title}</TabLabel>
           </TabButton>
-        );
-      })}
+        );        })}
     </TabBarContainer>
   );
 };
