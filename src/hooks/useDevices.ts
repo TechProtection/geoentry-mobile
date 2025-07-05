@@ -8,6 +8,11 @@ export interface Device {
   profile_id: string;
   created_at: string;
   updated_at: string;
+  profile?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
 }
 
 export const useDevices = () => {
@@ -45,4 +50,31 @@ export const getDeviceName = (deviceId: string | null, devices: Device[]): strin
   
   const device = devices.find(d => d.id === deviceId);
   return device ? device.name : 'Dispositivo Desconocido';
+};
+
+export const useDeviceStats = (devices: Device[] = [], events: any[] = []) => {
+  const totalDevices = devices.length;
+  const activeDevices = devices.length; // Todos están activos por ahora
+  
+  // Calcular dispositivos con actividad reciente (último día)
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  
+  const recentlyActiveDevices = devices.filter(device => {
+    return events.some(event => 
+      event.device_id === device.id && 
+      event.created_at && 
+      new Date(event.created_at) > yesterday
+    );
+  });
+  
+  const devicesOutOfZone = Math.max(0, totalDevices - recentlyActiveDevices.length);
+  const inactiveDevices = 0; // Por ahora no tenemos lógica para esto
+
+  return {
+    totalDevices,
+    activeDevices: recentlyActiveDevices.length,
+    devicesOutOfZone,
+    inactiveDevices,
+  };
 };

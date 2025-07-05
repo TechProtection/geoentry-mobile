@@ -1,81 +1,258 @@
 import React, { useState } from 'react';
-import { FlatList } from 'react-native';
-import styled from 'styled-components/native';
-import { COLORS, TYPOGRAPHY, SPACING } from '../theme';
-import { DeviceCard } from '../components/DeviceCard';
+import {
+  View,
+  Text,
+  ScrollView,
+  RefreshControl,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+} from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import tw from 'twrnc';
+import { useDevices, useDeviceStats } from '../hooks/useDevices';
+import { useEvents } from '../hooks/useEvents';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
-const Container = styled.View`
-    flex: 1;
-    background-color: ${COLORS.background};
-    padding: ${SPACING.lg}px;
-`;
+interface StatCardProps {
+  title: string;
+  value: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+  color: string;
+}
 
-const HeaderSection = styled.View`
-    margin-bottom: ${SPACING.xl}px;
-`;
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
+  <View style={tw`bg-gray-800 rounded-lg p-4 flex-1 mx-1`}>
+    <View style={tw`flex-row items-center justify-between`}>
+      <View style={tw`flex-1`}>
+        <Text style={tw`text-gray-400 text-sm font-medium`}>{title}</Text>
+        <Text style={tw`text-white text-2xl font-bold mt-1`}>{value}</Text>
+      </View>
+      <View style={[tw`p-2 rounded-full`, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+        <MaterialIcons name={icon} size={24} color={color} />
+      </View>
+    </View>
+  </View>
+);
 
-const Title = styled.Text`
-    color: ${COLORS.textPrimary};
-    font-size: ${TYPOGRAPHY.title}px;
-    font-weight: bold;
-    margin-bottom: ${SPACING.xs}px;
-`;
+interface DeviceCardProps {
+  device: any;
+  eventCounts: {
+    total: number;
+    today: number;
+  };
+  userProfile: any;
+}
 
-const Subtitle = styled.Text`
-    color: ${COLORS.textPrimary}99;
-    font-size: ${TYPOGRAPHY.body}px;
-`;
+const DeviceCard: React.FC<DeviceCardProps> = ({ device, eventCounts, userProfile }) => (
+  <View style={tw`bg-gray-800 rounded-lg p-5 mb-4`}>
+    <View style={tw`flex-row items-start`}>
+      <View style={tw`bg-blue-600 rounded-lg w-12 h-12 items-center justify-center mr-4`}>
+        <MaterialIcons name="smartphone" size={24} color="white" />
+      </View>
+      
+      <View style={tw`flex-1`}>
+        <Text style={tw`text-white text-lg font-semibold mb-3`}>{device.name}</Text>
+        
+        <View style={tw`flex-row mb-3`}>
+          <View style={tw`flex-1 mr-4`}>
+            <Text style={tw`text-gray-400 text-sm`}>Tipo:</Text>
+            <Text style={tw`text-white`}>{device.type}</Text>
+          </View>
+          <View style={tw`flex-1`}>
+            <Text style={tw`text-gray-400 text-sm`}>Usuario:</Text>
+            <Text style={tw`text-white`}>{userProfile?.full_name || 'N/A'}</Text>
+          </View>
+        </View>
+        
+        <Text style={tw`text-gray-400 text-sm mb-4`}>
+          Email: {userProfile?.email || 'N/A'}
+        </Text>
+        
+        <View style={tw`flex-row items-center justify-between`}>
+          <View style={tw`items-center`}>
+            <Text style={tw`text-blue-400 text-xl font-bold`}>{eventCounts.total}</Text>
+            <Text style={tw`text-gray-400 text-xs`}>Total Eventos</Text>
+          </View>
+          <View style={tw`items-center`}>
+            <Text style={tw`text-green-400 text-xl font-bold`}>{eventCounts.today}</Text>
+            <Text style={tw`text-gray-400 text-xs`}>Hoy</Text>
+          </View>
+          <View style={tw`items-center`}>
+            <View style={tw`bg-green-600 px-3 py-1 rounded`}>
+              <Text style={tw`text-white text-sm`}>Activo</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </View>
+  </View>
+);
 
-const devices = [
-    { id: '1', icon: 'lock', title: 'Smart Lock', location: 'Front Door', status: 'online' as const, isOn: true },
-    { id: '2', icon: 'lightbulb', title: 'Living Room Light', location: 'Living Room', status: 'online' as const, isOn: false },
-    { id: '3', icon: 'thermostat', title: 'Climate Control', location: 'Main Floor', status: 'online' as const, isOn: true },
-    { id: '4', icon: 'local-florist', title: 'Aromatic System', location: 'Bedroom', status: 'offline' as const, isOn: false },
-    { id: '5', icon: 'security', title: 'Security Camera', location: 'Garage', status: 'online' as const, isOn: true },
-    { id: '6', icon: 'speaker', title: 'Smart Speaker', location: 'Kitchen', status: 'online' as const, isOn: false },
-];
+const DevicesScreen: React.FC = () => {
+  const { devices, loading: devicesLoading, error: devicesError, refetch: refetchDevices } = useDevices();
+  const { events, loading: eventsLoading, error: eventsError, refetch: refetchEvents } = useEvents();
+  const { profile: userProfile, loading: profileLoading } = useCurrentUser();
+  const stats = useDeviceStats(devices, events);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-type DeviceStates = {
-    [key: string]: boolean;
-};
+  const loading = devicesLoading || eventsLoading || profileLoading;
+  const error = devicesError || eventsError;
 
-const DevicesScreen = () => {
-    const [deviceStates, setDeviceStates] = useState<DeviceStates>(
-        devices.reduce((acc, device) => ({ ...acc, [device.id]: device.isOn }), {})
-    );
+  const filteredDevices = devices.filter(device =>
+    device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    device.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (userProfile?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    const handleToggle = (deviceId: string, value: boolean) => {
-        setDeviceStates(prev => ({ ...prev, [deviceId]: value }));
+  const getEventCounts = (deviceId: string) => {
+    const deviceEvents = events.filter(event => event.device_id === deviceId);
+    const today = new Date().toDateString();
+    const todayEvents = deviceEvents.filter(event => {
+      if (!event.created_at) return false;
+      return new Date(event.created_at).toDateString() === today;
+    });
+
+    return {
+      total: deviceEvents.length,
+      today: todayEvents.length,
     };
+  };
 
-    const renderDevice = ({ item }: { item: typeof devices[0] }) => (
-        <DeviceCard
-            icon={item.icon}
-            title={item.title}
-            location={item.location}
-            status={item.status}
-            isOn={deviceStates[item.id]}
-            onToggle={(value) => handleToggle(item.id, value)}
-            onPress={() => console.log('Device pressed:', item.title)}
-        />
-    );
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchDevices(), refetchEvents()]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
+  const statsCards = [
+    { 
+      title: 'Total Dispositivos', 
+      value: stats.totalDevices.toString(), 
+      icon: 'smartphone' as keyof typeof MaterialIcons.glyphMap, 
+      color: '#60a5fa' 
+    },
+    { 
+      title: 'Dispositivos Activos', 
+      value: stats.activeDevices.toString(), 
+      icon: 'check-circle' as keyof typeof MaterialIcons.glyphMap, 
+      color: '#4ade80' 
+    },
+    { 
+      title: 'Fuera de Zona', 
+      value: stats.devicesOutOfZone.toString(), 
+      icon: 'location-off' as keyof typeof MaterialIcons.glyphMap, 
+      color: '#f87171' 
+    },
+    { 
+      title: 'Sin Actividad', 
+      value: stats.inactiveDevices.toString(), 
+      icon: 'pause-circle-outline' as keyof typeof MaterialIcons.glyphMap, 
+      color: '#9ca3af' 
+    },
+  ];
+
+  if (loading && !refreshing) {
     return (
-        <Container>
-            <HeaderSection>
-                <Title>Devices</Title>
-                <Subtitle>Manage your connected devices</Subtitle>
-            </HeaderSection>
-
-            <FlatList
-                data={devices}
-                renderItem={renderDevice}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: SPACING.xl }}
-            />
-        </Container>
+      <View style={tw`flex-1 bg-gray-900 items-center justify-center`}>
+        <ActivityIndicator size="large" color="#60a5fa" />
+        <Text style={tw`text-white mt-4`}>Cargando dispositivos...</Text>
+      </View>
     );
+  }
+
+  if (error && !refreshing) {
+    return (
+      <View style={tw`flex-1 bg-gray-900 items-center justify-center px-6`}>
+        <MaterialIcons name="error-outline" size={48} color="#f87171" />
+        <Text style={tw`text-red-400 text-center mt-4`}>
+          Error al cargar dispositivos: {error}
+        </Text>
+        <Pressable
+          style={tw`bg-blue-600 px-6 py-3 rounded-lg mt-4`}
+          onPress={onRefresh}
+        >
+          <Text style={tw`text-white font-medium`}>Reintentar</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={tw`flex-1 bg-gray-900`}>
+      <ScrollView
+        style={tw`flex-1`}
+        contentContainerStyle={tw`p-4 pb-8`}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#60a5fa"
+            colors={['#60a5fa']}
+          />
+        }
+      >
+        {/* Header */}
+        <View style={tw`mb-6`}>
+          <Text style={tw`text-white text-2xl font-bold`}>Dispositivos</Text>
+          <Text style={tw`text-gray-400 mt-1`}>
+            Gestiona todos los dispositivos registrados en el sistema
+          </Text>
+        </View>
+
+        {/* Stats Cards */}
+        <View style={tw`mb-6`}>
+          <View style={tw`flex-row mb-3`}>
+            <StatCard {...statsCards[0]} />
+            <StatCard {...statsCards[1]} />
+          </View>
+          <View style={tw`flex-row`}>
+            <StatCard {...statsCards[2]} />
+            <StatCard {...statsCards[3]} />
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={tw`bg-gray-800 rounded-lg p-3 mb-6 flex-row items-center`}>
+          <MaterialIcons name="search" size={20} color="#9ca3af" style={tw`mr-3`} />
+          <TextInput
+            style={tw`flex-1 text-white`}
+            placeholder="Buscar dispositivos..."
+            placeholderTextColor="#9ca3af"
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+          />
+        </View>
+
+        {/* Device List */}
+        {filteredDevices.length === 0 ? (
+          <View style={tw`items-center py-8`}>
+            <MaterialIcons name="smartphone" size={48} color="#9ca3af" />
+            <Text style={tw`text-gray-400 text-center mt-4`}>
+              {devices.length === 0 
+                ? 'No tienes dispositivos registrados' 
+                : 'No se encontraron dispositivos'}
+            </Text>
+          </View>
+        ) : (
+          filteredDevices.map((device) => (
+            <DeviceCard
+              key={device.id}
+              device={device}
+              eventCounts={getEventCounts(device.id)}
+              userProfile={userProfile}
+            />
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
 };
 
 export default DevicesScreen;
