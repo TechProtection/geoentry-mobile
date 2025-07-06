@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, Switch, TouchableOpacity, TextInput, Alert, Modal, View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -259,6 +259,8 @@ const MoreScreen = () => {
     createSensor, 
     updateSensorStatus, 
     deleteSensor,
+    availableTypes,
+    loadAvailableTypes,
     isControlsEnabled,
     proximityStatus
   } = useSensors();
@@ -274,6 +276,16 @@ const MoreScreen = () => {
     sensor_type: 'led_tv' as 'led_tv' | 'smart_light' | 'air_conditioner' | 'coffee_maker',
     isActive: true
   });
+
+  // Actualizar el tipo de sensor seleccionado cuando cambien los tipos disponibles
+  useEffect(() => {
+    if (availableTypes.length > 0) {
+      setNewSensor(prev => ({
+        ...prev,
+        sensor_type: availableTypes[0] as 'led_tv' | 'smart_light' | 'air_conditioner' | 'coffee_maker'
+      }));
+    }
+  }, [availableTypes]);
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
@@ -318,6 +330,15 @@ const MoreScreen = () => {
       return;
     }
 
+    if (availableTypes.length === 0) {
+      Alert.alert(
+        'Límite Alcanzado', 
+        'Ya tienes todos los tipos de sensores disponibles. Solo se permite uno de cada tipo.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
     if (!newSensor.name.trim()) {
       Alert.alert('Error', 'Por favor ingresa un nombre para el sensor');
       return;
@@ -338,11 +359,6 @@ const MoreScreen = () => {
       });
       setShowSensorModal(false);
     }
-  };
-
-  const handleToggleSensor = async (sensorId: string, currentStatus: boolean) => {
-    const newStatus = !currentStatus;
-    await updateSensorStatus(sensorId, newStatus);
   };
 
   const handleDeleteSensor = (sensorId: string, sensorName: string) => {
@@ -471,30 +487,30 @@ const MoreScreen = () => {
         
         <TouchableOpacity 
           onPress={() => setShowSensorModal(true)}
-          disabled={!isControlsEnabled}
+          disabled={!isControlsEnabled || availableTypes.length === 0}
           style={{ 
-            backgroundColor: isControlsEnabled ? COLORS.accent : COLORS.textPrimary + '33',
+            backgroundColor: (isControlsEnabled && availableTypes.length > 0) ? COLORS.accent : COLORS.textPrimary + '33',
             borderRadius: 8,
             padding: SPACING.md,
             marginBottom: SPACING.md,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            opacity: isControlsEnabled ? 1 : 0.6
+            opacity: (isControlsEnabled && availableTypes.length > 0) ? 1 : 0.6
           }}
         >
           <MaterialIcons 
             name="add" 
             size={20} 
-            color={isControlsEnabled ? COLORS.background : COLORS.textPrimary + '66'} 
+            color={(isControlsEnabled && availableTypes.length > 0) ? COLORS.background : COLORS.textPrimary + '66'} 
             style={{ marginRight: SPACING.xs }} 
           />
           <Text style={{
-            color: isControlsEnabled ? COLORS.background : COLORS.textPrimary + '66',
+            color: (isControlsEnabled && availableTypes.length > 0) ? COLORS.background : COLORS.textPrimary + '66',
             fontSize: TYPOGRAPHY.body,
             fontWeight: '600'
           }}>
-            Agregar Dispositivo
+            {availableTypes.length === 0 ? 'Todos los tipos agregados' : 'Agregar Dispositivo'}
           </Text>
         </TouchableOpacity>
 
@@ -720,32 +736,54 @@ const MoreScreen = () => {
               />
 
               <FormLabel>Tipo de Dispositivo</FormLabel>
-              <View style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                marginTop: SPACING.xs,
-                marginBottom: SPACING.md,
-              }}>
-                {[
-                  { value: 'led_tv', label: 'TV LED' },
-                  { value: 'smart_light', label: 'Luz Inteligente' },
-                  { value: 'air_conditioner', label: 'Aire Acondicionado' },
-                  { value: 'coffee_maker', label: 'Cafetera' },
-                ].map((option) => (
-                  <SensorTypeButton
-                    key={option.value}
-                    selected={newSensor.sensor_type === option.value}
-                    onPress={() => setNewSensor(prev => ({ 
-                      ...prev, 
-                      sensor_type: option.value as any 
-                    }))}
-                  >
-                    <SensorTypeText selected={newSensor.sensor_type === option.value}>
-                      {option.label}
-                    </SensorTypeText>
-                  </SensorTypeButton>
-                ))}
-              </View>
+              {availableTypes.length === 0 ? (
+                <View style={{
+                  padding: SPACING.md,
+                  backgroundColor: COLORS.secondary + '66',
+                  borderRadius: 8,
+                  marginBottom: SPACING.md,
+                }}>
+                  <Text style={{
+                    color: COLORS.textPrimary + '99',
+                    fontSize: TYPOGRAPHY.small,
+                    textAlign: 'center',
+                  }}>
+                    Ya tienes todos los tipos de sensores disponibles.{'\n'}
+                    Solo se permite uno de cada tipo.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  marginTop: SPACING.xs,
+                  marginBottom: SPACING.md,
+                }}>
+                  {availableTypes.map((type) => {
+                    const typeLabels = {
+                      'led_tv': 'TV LED',
+                      'smart_light': 'Luz Inteligente', 
+                      'air_conditioner': 'Aire Acondicionado',
+                      'coffee_maker': 'Cafetera',
+                    };
+                    
+                    return (
+                      <SensorTypeButton
+                        key={type}
+                        selected={newSensor.sensor_type === type}
+                        onPress={() => setNewSensor(prev => ({ 
+                          ...prev, 
+                          sensor_type: type as any 
+                        }))}
+                      >
+                        <SensorTypeText selected={newSensor.sensor_type === type}>
+                          {typeLabels[type as keyof typeof typeLabels]}
+                        </SensorTypeText>
+                      </SensorTypeButton>
+                    );
+                  })}
+                </View>
+              )}
 
               <View style={{
                 flexDirection: 'row',

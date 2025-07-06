@@ -491,6 +491,21 @@ class ApiService {
       throw error;
     }
   }
+
+  async getAvailableSensorTypes(userId?: string): Promise<string[]> {
+    try {
+      const targetUserId = userId || await this.getCurrentUserId();
+      if (!targetUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      const result = await this.makeRequest<{ availableTypes: string[] }>(`/sensors/user/${targetUserId}/available-types`);
+      return result.availableTypes;
+    } catch (error) {
+      console.error('Error fetching available sensor types:', error);
+      return [];
+    }
+  }
 }
 
 export const apiService = new ApiService();

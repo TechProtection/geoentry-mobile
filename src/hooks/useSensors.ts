@@ -7,6 +7,7 @@ export const useSensors = () => {
   const [sensors, setSensors] = useState<Sensor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   
   // Hook para verificar si el usuario está en casa
   const proximityStatus = useUserProximityStatus();
@@ -26,6 +27,15 @@ export const useSensors = () => {
     }
   }, []);
 
+  const loadAvailableTypes = useCallback(async () => {
+    try {
+      const types = await apiService.getAvailableSensorTypes();
+      setAvailableTypes(types);
+    } catch (err: any) {
+      console.error('Error loading available types:', err);
+    }
+  }, []);
+
   const createSensor = useCallback(async (sensorData: CreateSensorData): Promise<Sensor | null> => {
     try {
       setLoading(true);
@@ -36,16 +46,25 @@ export const useSensors = () => {
       // Actualizar la lista local
       setSensors(prev => [...prev, newSensor]);
       
+      // Actualizar tipos disponibles
+      await loadAvailableTypes();
+      
       return newSensor;
     } catch (err: any) {
       console.error('Error creating sensor:', err);
       setError(err.message || 'Error al crear sensor');
-      Alert.alert('Error', 'No se pudo crear el sensor');
+      
+      // Mostrar mensaje específico si ya existe el tipo
+      if (err.message && err.message.includes('Ya tienes un sensor de tipo')) {
+        Alert.alert('Sensor Duplicado', err.message);
+      } else {
+        Alert.alert('Error', 'No se pudo crear el sensor');
+      }
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadAvailableTypes]);
 
   const updateSensorStatus = useCallback(async (sensorId: string, isActive: boolean): Promise<boolean> => {
     // 🔒 VERIFICAR SI EL USUARIO ESTÁ EN CASA
@@ -122,13 +141,16 @@ export const useSensors = () => {
 
   useEffect(() => {
     loadSensors();
-  }, [loadSensors]);
+    loadAvailableTypes();
+  }, [loadSensors, loadAvailableTypes]);
 
   return {
     sensors,
     loading,
     error,
+    availableTypes,
     loadSensors,
+    loadAvailableTypes,
     createSensor,
     updateSensorStatus,
     deleteSensor,
