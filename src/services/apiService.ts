@@ -3,8 +3,8 @@ import { Database } from '../types/supabase';
 import { supabase } from '../supabase/supabase-client';
 import { deviceService } from './deviceService';
 
-const API_BASE_URL = 'https://geoentry-rest-api.onrender.com/api';
-//const API_BASE_URL = 'http://192.168.125.211:3000/api';
+//const API_BASE_URL = 'https://geoentry-rest-api.onrender.com/api';
+const API_BASE_URL = 'http://192.168.18.59:3000/api';
 
 // Tipos basados en la estructura de Supabase
 type LocationRow = Database['public']['Tables']['locations']['Row'];
@@ -48,6 +48,22 @@ export interface BackendProximityEvent {
   device_id?: string | null;
   user_id?: string | null;
   // created_at se omite porque se genera automáticamente en el backend
+}
+
+export interface Sensor {
+  id: string;
+  name: string;
+  sensor_type: 'led_tv' | 'smart_light' | 'air_conditioner' | 'coffee_maker';
+  isActive: boolean;
+  user_id: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface CreateSensorData {
+  name: string;
+  sensor_type: 'led_tv' | 'smart_light' | 'air_conditioner' | 'coffee_maker';
+  isActive: boolean;
 }
 
 class ApiService {
@@ -397,6 +413,82 @@ class ApiService {
       }));
     } catch (error) {
       return [];
+    }
+  }
+
+  async getSensorsByUser(userId?: string): Promise<any[]> {
+    try {
+      const targetUserId = userId || await this.getCurrentUserId();
+      if (!targetUserId) {
+        return [];
+      }
+
+      const result = await this.makeRequest<any[]>(`/sensors/user/${targetUserId}`);
+      return result;
+    } catch (error) {
+      console.error('Error fetching sensors:', error);
+      return [];
+    }
+  }
+
+  async getSensorsByUserAndType(sensorType: 'led_tv' | 'smart_light' | 'air_conditioner' | 'coffee_maker', userId?: string): Promise<any[]> {
+    try {
+      const targetUserId = userId || await this.getCurrentUserId();
+      if (!targetUserId) {
+        return [];
+      }
+
+      const result = await this.makeRequest<any[]>(`/sensors/user/${targetUserId}/type/${sensorType}`);
+      return result;
+    } catch (error) {
+      console.error('Error fetching sensors by type:', error);
+      return [];
+    }
+  }
+
+  async createSensorForUser(sensorData: {
+    name: string;
+    sensor_type: 'led_tv' | 'smart_light' | 'air_conditioner' | 'coffee_maker';
+    isActive: boolean;
+  }, userId?: string): Promise<any> {
+    try {
+      const targetUserId = userId || await this.getCurrentUserId();
+      if (!targetUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      const result = await this.makeRequest(`/sensors/user/${targetUserId}`, {
+        method: 'POST',
+        body: JSON.stringify(sensorData),
+      });
+      return result;
+    } catch (error) {
+      console.error('Error creating sensor:', error);
+      throw error;
+    }
+  }
+
+  async updateSensorStatus(sensorId: string, isActive: boolean): Promise<any> {
+    try {
+      const result = await this.makeRequest(`/sensors/${sensorId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive }),
+      });
+      return result;
+    } catch (error) {
+      console.error('Error updating sensor status:', error);
+      throw error;
+    }
+  }
+
+  async deleteSensor(sensorId: string): Promise<void> {
+    try {
+      await this.makeRequest(`/sensors/${sensorId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error('Error deleting sensor:', error);
+      throw error;
     }
   }
 }
