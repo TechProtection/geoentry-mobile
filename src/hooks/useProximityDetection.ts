@@ -122,7 +122,6 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
 
   // Proximity event callbacks
   const onProximityEnter = useCallback(async (event: ProximityEvent) => {
-    console.log('Proximity Enter:', event);
     
     // Add history entry
     await addHistoryEntry({
@@ -166,7 +165,6 @@ export const useProximityDetection = (options: UseProximityDetectionOptions = {}
   }, [addHistoryEntry, dispatch]);
 
   const onProximityExit = useCallback(async (event: ProximityEvent) => {
-    console.log('Proximity Exit:', event);
     
     // Add history entry
     await addHistoryEntry({
