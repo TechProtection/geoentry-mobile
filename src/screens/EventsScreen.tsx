@@ -8,7 +8,7 @@ import { useDevices, getDeviceName } from '../hooks/useDevices';
 
 const Container = styled.View`
   flex: 1;
-  background-color: ${COLORS.background};
+  background-color: #111827;
   padding: ${SPACING.md}px;
 `;
 
@@ -17,14 +17,14 @@ const Header = styled.View`
 `;
 
 const Title = styled.Text`
-  color: ${COLORS.textPrimary};
+  color: #ffffff;
   font-size: ${TYPOGRAPHY.title}px;
   font-weight: bold;
   margin-bottom: ${SPACING.xs}px;
 `;
 
 const Subtitle = styled.Text`
-  color: ${COLORS.textPrimary}99;
+  color: #9ca3af;
   font-size: ${TYPOGRAPHY.body}px;
 `;
 
@@ -37,7 +37,7 @@ const StatsContainer = styled.View`
 `;
 
 const StatCard = styled.View`
-  background-color: ${COLORS.secondary};
+  background-color: #1f2937;
   border-radius: 12px;
   padding: ${SPACING.md}px;
   flex: 1;
@@ -52,39 +52,39 @@ const StatHeader = styled.View`
 `;
 
 const StatValue = styled.Text`
-  color: ${COLORS.textPrimary};
+  color: #ffffff;
   font-size: ${TYPOGRAPHY.subtitle}px;
   font-weight: bold;
 `;
 
 const StatLabel = styled.Text`
-  color: ${COLORS.textPrimary}99;
+  color: #9ca3af;
   font-size: ${TYPOGRAPHY.small}px;
   font-weight: 500;
 `;
 
 const StatIcon = styled.View<{ color: string }>`
-  background-color: ${COLORS.background};
+  background-color: #111827;
   border-radius: 20px;
   padding: ${SPACING.sm}px;
 `;
 
 // Events List
 const EventsHeader = styled.View`
-  background-color: ${COLORS.secondary};
+  background-color: #1f2937;
   border-radius: 12px;
   padding: ${SPACING.md}px;
   margin-bottom: ${SPACING.md}px;
 `;
 
 const EventsTitle = styled.Text`
-  color: ${COLORS.textPrimary};
+  color: #ffffff;
   font-size: ${TYPOGRAPHY.subtitle}px;
   font-weight: bold;
 `;
 
 const EventItem = styled.View`
-  background-color: ${COLORS.background};
+  background-color: #1f2937;
   border-radius: 12px;
   padding: ${SPACING.lg}px;
   margin-bottom: ${SPACING.md}px;
@@ -125,13 +125,13 @@ const EventBadge = styled.View<{ eventType: 'enter' | 'exit' }>`
 `;
 
 const EventBadgeText = styled.Text`
-  color: ${COLORS.textPrimary};
+  color: #ffffff;
   font-size: ${TYPOGRAPHY.micro}px;
   font-weight: 600;
 `;
 
 const EventDevice = styled.Text`
-  color: ${COLORS.textPrimary};
+  color: #ffffff;
   font-size: ${TYPOGRAPHY.body}px;
   font-weight: 600;
   flex: 1;
@@ -146,7 +146,7 @@ const EventDetails = styled.View`
 `;
 
 const EventLocation = styled.Text`
-  color: ${COLORS.textPrimary}99;
+  color: #9ca3af;
   font-size: ${TYPOGRAPHY.small}px;
   margin-right: ${SPACING.lg}px;
   flex: 1;
@@ -155,7 +155,7 @@ const EventLocation = styled.Text`
 `;
 
 const EventDistance = styled.Text`
-  color: ${COLORS.textPrimary}99;
+  color: #9ca3af;
   font-size: ${TYPOGRAPHY.small}px;
   margin-bottom: ${SPACING.xs}px;
 `;
@@ -168,26 +168,26 @@ const EventTime = styled.View`
 `;
 
 const EventDate = styled.Text`
-  color: ${COLORS.textPrimary};
+  color: #ffffff;
   font-size: ${TYPOGRAPHY.small}px;
   font-weight: 600;
   margin-bottom: ${SPACING.xs}px;
 `;
 
 const EventTimeText = styled.Text`
-  color: ${COLORS.textPrimary}99;
+  color: #9ca3af;
   font-size: ${TYPOGRAPHY.micro}px;
 `;
 
 const EmptyState = styled.View`
-  background-color: ${COLORS.secondary};
+  background-color: #1f2937;
   border-radius: 12px;
   padding: ${SPACING.xl}px;
   align-items: center;
 `;
 
 const EmptyStateText = styled.Text`
-  color: ${COLORS.textPrimary}99;
+  color: #9ca3af;
   font-size: ${TYPOGRAPHY.body}px;
   text-align: center;
   margin-top: ${SPACING.md}px;
@@ -276,7 +276,7 @@ const EventsScreen = () => {
           
           <EventDetails>
             <EventLocation>
-              <MaterialIcons name="place" size={14} color={COLORS.textPrimary + '99'} />
+              <MaterialIcons name="place" size={14} color="#9ca3af" />
               {' '}{item.home_location_name}
             </EventLocation>
             <EventDistance>📍 {Math.round(item.distance)}m</EventDistance>
@@ -295,7 +295,7 @@ const EventsScreen = () => {
     return (
       <Container>
         <LoadingContainer>
-          <ActivityIndicator size="large" color={COLORS.accent} />
+          <ActivityIndicator size="large" color="#60a5fa" />
         </LoadingContainer>
       </Container>
     );
@@ -323,8 +323,8 @@ const EventsScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[COLORS.accent]}
-            tintColor={COLORS.accent}
+            colors={['#60a5fa']}
+            tintColor="#60a5fa"
           />
         }
         ListHeaderComponent={
@@ -335,10 +335,10 @@ const EventsScreen = () => {
             </Header>
 
             <StatsContainer>
-              {renderStatCard('Total Eventos', stats.totalEvents.toString(), 'event', COLORS.accent)}
-              {renderStatCard('Eventos Hoy', stats.todayEvents.toString(), 'today', COLORS.statusGreen)}
-              {renderStatCard('Entradas', stats.enterEvents.toString(), 'arrow-upward', COLORS.statusGreen)}
-              {renderStatCard('Salidas', stats.exitEvents.toString(), 'arrow-downward', COLORS.statusRed)}
+              {renderStatCard('Total Eventos', stats.totalEvents.toString(), 'event', '#60a5fa')}
+              {renderStatCard('Eventos Hoy', stats.todayEvents.toString(), 'today', '#4ade80')}
+              {renderStatCard('Entradas', stats.enterEvents.toString(), 'arrow-upward', '#4ade80')}
+              {renderStatCard('Salidas', stats.exitEvents.toString(), 'arrow-downward', '#f87171')}
             </StatsContainer>
 
             <EventsHeader>
@@ -348,7 +348,7 @@ const EventsScreen = () => {
         }
         ListEmptyComponent={
           <EmptyState>
-            <MaterialIcons name="event" size={48} color={COLORS.textPrimary + '99'} />
+            <MaterialIcons name="event" size={48} color="#9ca3af" />
             <EmptyStateText>
               No hay eventos registrados. Los eventos aparecerán aquí cuando los dispositivos entren o salgan de las ubicaciones configuradas.
             </EmptyStateText>

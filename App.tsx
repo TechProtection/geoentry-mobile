@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar, SafeAreaView, Platform, View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import styled, { ThemeProvider } from 'styled-components/native';
 import { theme } from './src/theme';
@@ -36,6 +36,53 @@ const LoadingContainer = styled.View`
     background-color: ${theme.COLORS.background};
 `;
 
+// Safe Area Wrapper Component
+const SafeScreenWrapper = ({ children }: { children: React.ReactNode }) => {
+    const insets = useSafeAreaInsets();
+    return (
+        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: theme.COLORS.background }}>
+            {children}
+        </View>
+    );
+};
+
+// Wrapped Screen Components
+const SafeHomeScreen = () => (
+    <SafeScreenWrapper>
+        <HomeScreen />
+    </SafeScreenWrapper>
+);
+
+const SafeGroupsScreen = () => (
+    <SafeScreenWrapper>
+        <GroupsScreen />
+    </SafeScreenWrapper>
+);
+
+const SafeDevicesScreen = () => (
+    <SafeScreenWrapper>
+        <DevicesScreen />
+    </SafeScreenWrapper>
+);
+
+const SafeStatsScreen = () => (
+    <SafeScreenWrapper>
+        <StatsScreen />
+    </SafeScreenWrapper>
+);
+
+const SafeLocationScreen = () => (
+    <SafeScreenWrapper>
+        <LocationScreen />
+    </SafeScreenWrapper>
+);
+
+const SafeMoreScreen = () => (
+    <SafeScreenWrapper>
+        <MoreScreen />
+    </SafeScreenWrapper>
+);
+
 function AuthStack() {
     return (
         <Stack.Navigator
@@ -54,6 +101,7 @@ function MainTabNavigator() {
         <Tab.Navigator
             tabBar={(props) => <CustomTabBar {...props} />}
             screenOptions={{
+                headerShown: false,
                 headerStyle: {
                     backgroundColor: theme.COLORS.background,
                     height: 56,
@@ -67,42 +115,42 @@ function MainTabNavigator() {
         >
             <Tab.Screen
                 name="Home"
-                component={HomeScreen}
+                component={SafeHomeScreen}
                 options={{
                     title: 'Dashboard',
                 }}
             />
             <Tab.Screen
                 name="Groups"
-                component={GroupsScreen}
+                component={SafeGroupsScreen}
                 options={{
                     title: 'Locations',
                 }}
             />
             <Tab.Screen
                 name="Devices"
-                component={DevicesScreen}
+                component={SafeDevicesScreen}
                 options={{
                     title: 'Devices',
                 }}
             />
             <Tab.Screen
                 name="Stats"
-                component={StatsScreen}
+                component={SafeStatsScreen}
                 options={{
                     title: 'Eventos',
                 }}
             />
             <Tab.Screen
                 name="Location"
-                component={LocationScreen}
+                component={SafeLocationScreen}
                 options={{
                     title: 'Analíticas',
                 }}
             />
             <Tab.Screen
                 name="More"
-                component={MoreScreen}
+                component={SafeMoreScreen}
                 options={{
                     title: 'Soporte',
                 }}
