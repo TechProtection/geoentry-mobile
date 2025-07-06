@@ -76,7 +76,7 @@ const tabs: Tab[] = [
   { name: 'Devices', title: 'Devices', icon: 'smartphone', focusedIcon: 'smartphone' },
   { name: 'Stats', title: 'Events', icon: 'show-chart', focusedIcon: 'show-chart' },
   { name: 'Location', title: 'Location', icon: 'location-on', focusedIcon: 'location-on' },
-  { name: 'More', title: 'Support', icon: 'help', focusedIcon: 'help' },
+  { name: 'More', title: 'Settings', icon: 'settings', focusedIcon: 'settings' },
 ];
 
 export const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, navigation }) => {
