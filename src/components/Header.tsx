@@ -44,19 +44,6 @@ export const Header = () => {
     return (
         <HeaderContainer>
             <Logo>GeoEntry</Logo>
-            <HeaderActions>
-                <TouchableOpacity accessibilityLabel="Settings">
-                    <MaterialIcons name="settings" size={24} color={COLORS.textPrimary} />
-                </TouchableOpacity>
-                <TouchableOpacity accessibilityLabel="Notifications">
-                    <MaterialIcons name="notifications" size={24} color={COLORS.textPrimary} />
-                </TouchableOpacity>
-                <TouchableOpacity accessibilityLabel="Profile">
-                    <ProfileAvatar>
-                        <AvatarText>P</AvatarText>
-                    </ProfileAvatar>
-                </TouchableOpacity>
-            </HeaderActions>
         </HeaderContainer>
     );
 };
