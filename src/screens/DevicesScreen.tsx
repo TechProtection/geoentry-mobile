@@ -212,10 +212,6 @@ const DevicesScreen: React.FC = () => {
             <StatCard {...statsCards[0]} />
             <StatCard {...statsCards[1]} />
           </View>
-          <View style={tw`flex-row`}>
-            <StatCard {...statsCards[2]} />
-            <StatCard {...statsCards[3]} />
-          </View>
         </View>
 
         {/* Device List */}

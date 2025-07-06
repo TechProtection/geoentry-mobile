@@ -1,19 +1,12 @@
-import React, { useState } from 'react';
-import { ScrollView, FlatList, TouchableOpacity, Dimensions, View, Text, Switch } from 'react-native';
+import React from 'react';
+import { Dimensions, View, Text, Switch } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import styled from 'styled-components/native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../theme';
 import { Header } from '../components/Header';
-import { StatsCard } from '../components/StatsCard';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useSensors } from '../hooks/useSensors';
-import {
-  LineChart,
-  BarChart,
-  PieChart,
-  ContributionGraph,
-  StackedBarChart
-} from 'react-native-chart-kit';
 
 const Container = styled.View`
   flex: 1;
@@ -270,7 +263,14 @@ type SensorType = keyof typeof sensorTypeConfig;
 
 const HomeScreen = () => {
     const { metrics, chartData, deviceAnalysis, isLoading } = useAnalytics();
-    const { sensors, updateSensorStatus, loading: sensorsLoading } = useSensors();
+    const { sensors, updateSensorStatus, loading: sensorsLoading, loadSensors } = useSensors();
+    
+    // Recargar sensores cuando la pantalla entre en foco
+    useFocusEffect(
+        React.useCallback(() => {
+            loadSensors();
+        }, [loadSensors])
+    );
     
     const screenWidth = Dimensions.get('window').width;
     const chartWidth = screenWidth - (SPACING.lg * 4); // Accounting for padding
