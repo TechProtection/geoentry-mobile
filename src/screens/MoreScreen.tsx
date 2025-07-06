@@ -456,13 +456,6 @@ const MoreScreen = () => {
                 </SensorInfo>
               </View>
               <SensorActions>
-                <IconButton onPress={() => handleToggleSensor(sensor.id, sensor.isActive)}>
-                  <MaterialIcons 
-                    name={sensor.isActive ? 'power-off' : 'power'} 
-                    size={20} 
-                    color={sensor.isActive ? COLORS.destructive : COLORS.accent} 
-                  />
-                </IconButton>
                 <IconButton onPress={() => handleDeleteSensor(sensor.id, sensor.name)}>
                   <MaterialIcons name="delete" size={20} color={COLORS.destructive} />
                 </IconButton>
