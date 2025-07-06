@@ -33,6 +33,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (session?.user) {
         loadUserProfile()
       } else {
+        console.log('No initial session found');
         setLoading(false)
       }
     })
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loadUserProfile = async () => {
     try {
       const userProfile = await authService.getCurrentUserProfile()
+      
       if (userProfile) {
         setProfile(userProfile)
         setUser({
@@ -78,6 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.warn('Failed to register device:', error)
           }
         }, 500) // Delay menor porque el perfil ya está cargado
+      } else {
       }
     } catch (error) {
       console.error('Error loading user profile:', error)

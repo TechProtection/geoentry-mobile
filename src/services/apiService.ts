@@ -60,7 +60,13 @@ class ApiService {
   // Obtener el usuario actual de Supabase
   private async getCurrentUserId(): Promise<string | null> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error('Supabase auth error:', error);
+        return null;
+      }
+      
       return user?.id || null;
     } catch (error) {
       console.error('Error getting current user:', error);
@@ -145,15 +151,18 @@ class ApiService {
   async getLocations(): Promise<HomeLocation[]> {
     try {
       const userId = await this.getCurrentUserId();
+      
       if (!userId) {
         return [];
       }
 
       // Obtener solo las ubicaciones del usuario actual
-      const result = await this.makeRequest<ApiHomeLocation[]>(`/locations?profile_id=${userId}`);
+      const url = `/locations?profile_id=${userId}`;
+      
+      const result = await this.makeRequest<ApiHomeLocation[]>(url);
       
       // Convertir la respuesta de la API al formato interno
-      return result.map(apiLocation => ({
+      const locations = result.map(apiLocation => ({
         id: apiLocation.id || Date.now().toString(),
         name: apiLocation.name,
         coordinates: {
@@ -165,7 +174,14 @@ class ApiService {
         isActive: apiLocation.is_active,
         createdAt: apiLocation.created_at || new Date().toISOString(),
       }));
+      
+      return locations;
     } catch (error) {
+      console.error('Error in getLocations:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return [];
     }
   }
@@ -250,7 +266,6 @@ class ApiService {
         // created_at se genera automáticamente en el backend, no enviar
       };
       
-      console.log('Formatted event for backend:', formattedEvent);
       
       // Validar que device_id sea UUID si se proporciona
       if (formattedEvent.device_id && !this.isValidUUID(formattedEvent.device_id)) {
@@ -276,7 +291,6 @@ class ApiService {
         method: 'GET',
       });
       
-      console.log('API health check status:', response.status);
       return response.status === 200;
     } catch (error) {
       console.error('API health check failed:', error);
@@ -313,7 +327,6 @@ class ApiService {
         return;
       } catch (error) {
         // Dispositivo no existe, continuar con el registro
-        console.log('Device not found, registering new device...');
       }
 
       const deviceData = {

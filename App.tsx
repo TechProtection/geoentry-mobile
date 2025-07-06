@@ -124,7 +124,7 @@ function MainTabNavigator() {
                 name="Groups"
                 component={SafeGroupsScreen}
                 options={{
-                    title: 'Locations',
+                    title: 'Ubicaciones',
                 }}
             />
             <Tab.Screen
