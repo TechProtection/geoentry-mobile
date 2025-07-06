@@ -263,7 +263,14 @@ type SensorType = keyof typeof sensorTypeConfig;
 
 const HomeScreen = () => {
     const { metrics, chartData, deviceAnalysis, isLoading } = useAnalytics();
-    const { sensors, updateSensorStatus, loading: sensorsLoading, loadSensors } = useSensors();
+    const { 
+        sensors, 
+        updateSensorStatus, 
+        loading: sensorsLoading, 
+        loadSensors, 
+        isControlsEnabled,
+        proximityStatus 
+    } = useSensors();
     
     // Recargar sensores cuando la pantalla entre en foco
     useFocusEffect(
@@ -356,21 +363,47 @@ const HomeScreen = () => {
                             color={COLORS.accent} 
                         />
                         <SensorTypeTitle>{typeConfig.label}</SensorTypeTitle>
+                        {!isControlsEnabled && (
+                            <MaterialIcons 
+                                name="lock" 
+                                size={16} 
+                                color={COLORS.textPrimary + '66'} 
+                                style={{ marginLeft: 8 }}
+                            />
+                        )}
                     </SensorTypeHeader>
                     
                     {typeSensors.map((sensor) => (
-                        <SensorItem key={sensor.id}>
+                        <SensorItem key={sensor.id} style={{ 
+                            opacity: isControlsEnabled ? 1 : 0.6 
+                        }}>
                             <SensorInfo>
-                                <SensorName>{sensor.name}</SensorName>
-                                <SensorStatus>
-                                    {sensor.isActive ? 'Encendido' : 'Apagado'}
+                                <SensorName style={{ 
+                                    color: isControlsEnabled ? COLORS.textPrimary : COLORS.textPrimary + '66'
+                                }}>
+                                    {sensor.name}
+                                </SensorName>
+                                <SensorStatus style={{ 
+                                    color: isControlsEnabled 
+                                        ? (sensor.isActive ? COLORS.accent : COLORS.textPrimary + '99')
+                                        : COLORS.textPrimary + '66'
+                                }}>
+                                    {!isControlsEnabled ? 'Bloqueado (fuera de casa)' : 
+                                     sensor.isActive ? 'Encendido' : 'Apagado'}
                                 </SensorStatus>
                             </SensorInfo>
                             <SensorSwitch
                                 value={sensor.isActive}
                                 onValueChange={() => handleToggleSensor(sensor.id, sensor.isActive)}
-                                trackColor={{ false: COLORS.textPrimary + '33', true: COLORS.accent + '66' }}
-                                thumbColor={sensor.isActive ? COLORS.accent : COLORS.textPrimary + '66'}
+                                disabled={!isControlsEnabled}
+                                trackColor={{ 
+                                    false: COLORS.textPrimary + (isControlsEnabled ? '33' : '22'), 
+                                    true: COLORS.accent + (isControlsEnabled ? '66' : '33') 
+                                }}
+                                thumbColor={
+                                    !isControlsEnabled ? COLORS.textPrimary + '44' :
+                                    sensor.isActive ? COLORS.accent : COLORS.textPrimary + '66'
+                                }
                             />
                         </SensorItem>
                     ))}
@@ -435,6 +468,57 @@ const HomeScreen = () => {
                     <WelcomeTitle>Welcome to GeoEntry</WelcomeTitle>
                     <WelcomeSubtitle>Manage your smart home devices</WelcomeSubtitle>
                 </WelcomeSection>
+
+                {/* Estado de Proximidad */}
+                <AnalyticsCard style={{ marginBottom: SPACING.lg }}>
+                    <AnalyticsHeader>
+                        <MaterialIcons 
+                            name={isControlsEnabled ? "home" : "home-filled"} 
+                            size={24} 
+                            color={isControlsEnabled ? COLORS.accent : COLORS.textPrimary + '66'} 
+                        />
+                        <AnalyticsTitle>Estado Actual</AnalyticsTitle>
+                        {proximityStatus.loading && (
+                            <MaterialIcons 
+                                name="sync" 
+                                size={16} 
+                                color={COLORS.textPrimary + '66'} 
+                                style={{ marginLeft: 'auto' }}
+                            />
+                        )}
+                    </AnalyticsHeader>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm }}>
+                        <Text style={{ 
+                            color: isControlsEnabled ? COLORS.accent : COLORS.textPrimary + '66',
+                            fontSize: TYPOGRAPHY.body,
+                            fontWeight: '600',
+                            marginRight: SPACING.sm
+                        }}>
+                            {isControlsEnabled ? '🏠 En Casa' : '🚪 Fuera de Casa'}
+                        </Text>
+                        {!isControlsEnabled && (
+                            <MaterialIcons name="lock" size={16} color={COLORS.textPrimary + '66'} />
+                        )}
+                    </View>
+                    <Text style={{ 
+                        color: COLORS.textPrimary + '99',
+                        fontSize: TYPOGRAPHY.small
+                    }}>
+                        {isControlsEnabled 
+                            ? 'Los controles de sensores están disponibles'
+                            : 'Los controles están bloqueados hasta que regreses a casa'
+                        }
+                    </Text>
+                    {proximityStatus.lastEventTime && (
+                        <Text style={{ 
+                            color: COLORS.textPrimary + '66',
+                            fontSize: TYPOGRAPHY.small,
+                            marginTop: SPACING.xs
+                        }}>
+                            Último evento: {formatLastEvent(proximityStatus.lastEventTime)}
+                        </Text>
+                    )}
+                </AnalyticsCard>
 
                 <SectionTitle>Quick Controls</SectionTitle>
                 {renderSensorsByType()}

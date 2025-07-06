@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService, Sensor, CreateSensorData } from '../services/apiService';
 import { Alert } from 'react-native';
+import { useUserProximityStatus } from './useUserProximityStatus';
 
 export const useSensors = () => {
   const [sensors, setSensors] = useState<Sensor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Hook para verificar si el usuario está en casa
+  const proximityStatus = useUserProximityStatus();
 
   const loadSensors = useCallback(async () => {
     try {
@@ -44,6 +48,26 @@ export const useSensors = () => {
   }, []);
 
   const updateSensorStatus = useCallback(async (sensorId: string, isActive: boolean): Promise<boolean> => {
+    // 🔒 VERIFICAR SI EL USUARIO ESTÁ EN CASA
+    if (!proximityStatus.isAtHome) {
+      Alert.alert(
+        '🏠 Control Bloqueado', 
+        'Solo puedes controlar los sensores cuando estés en casa. Tu último estado registrado es "fuera de casa".',
+        [
+          { 
+            text: 'Entendido', 
+            style: 'default' 
+          },
+          { 
+            text: 'Refrescar Estado', 
+            onPress: () => proximityStatus.refresh(),
+            style: 'default'
+          }
+        ]
+      );
+      return false;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -64,7 +88,7 @@ export const useSensors = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [proximityStatus.isAtHome, proximityStatus.refresh]);
 
   const deleteSensor = useCallback(async (sensorId: string): Promise<boolean> => {
     try {
@@ -113,5 +137,8 @@ export const useSensors = () => {
     getLightSensors,
     getACSensors,
     getCoffeeMakerSensors,
+    // Estados de proximidad
+    proximityStatus,
+    isControlsEnabled: proximityStatus.isAtHome,
   };
 };

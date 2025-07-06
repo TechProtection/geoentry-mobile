@@ -258,7 +258,9 @@ const MoreScreen = () => {
     loading: sensorsLoading, 
     createSensor, 
     updateSensorStatus, 
-    deleteSensor 
+    deleteSensor,
+    isControlsEnabled,
+    proximityStatus
   } = useSensors();
 
   const [darkMode, setDarkMode] = useState(true);
@@ -307,6 +309,15 @@ const MoreScreen = () => {
   };
 
   const handleCreateSensor = async () => {
+    if (!isControlsEnabled) {
+      Alert.alert(
+        '🏠 Control Bloqueado', 
+        'Solo puedes crear dispositivos cuando estés en casa.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
     if (!newSensor.name.trim()) {
       Alert.alert('Error', 'Por favor ingresa un nombre para el sensor');
       return;
@@ -335,6 +346,15 @@ const MoreScreen = () => {
   };
 
   const handleDeleteSensor = (sensorId: string, sensorName: string) => {
+    if (!isControlsEnabled) {
+      Alert.alert(
+        '🏠 Control Bloqueado', 
+        'Solo puedes eliminar dispositivos cuando estés en casa.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
     Alert.alert(
       'Eliminar Sensor',
       `¿Estás seguro de que quieres eliminar "${sensorName}"?`,
@@ -405,21 +425,72 @@ const MoreScreen = () => {
 
         <SectionTitle>Dispositivos Inteligentes</SectionTitle>
         
+        {/* Estado de Proximidad */}
+        <SettingItem style={{ 
+          backgroundColor: isControlsEnabled ? COLORS.accent + '22' : COLORS.textPrimary + '11',
+          marginBottom: SPACING.md
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <MaterialIcons 
+              name={isControlsEnabled ? "home" : "home-filled"} 
+              size={24} 
+              color={isControlsEnabled ? COLORS.accent : COLORS.textPrimary + '66'} 
+              style={{ marginRight: SPACING.sm }}
+            />
+            <View style={{ flex: 1 }}>
+              <SettingText style={{ 
+                fontWeight: '600',
+                color: isControlsEnabled ? COLORS.accent : COLORS.textPrimary + '66'
+              }}>
+                {isControlsEnabled ? 'En Casa' : 'Fuera de Casa'}
+              </SettingText>
+              <Text style={{ 
+                color: COLORS.textPrimary + '99',
+                fontSize: TYPOGRAPHY.small,
+                marginTop: 2
+              }}>
+                {isControlsEnabled 
+                  ? 'Controles disponibles'
+                  : 'Controles bloqueados'
+                }
+              </Text>
+            </View>
+            {!isControlsEnabled && (
+              <MaterialIcons name="lock" size={20} color={COLORS.textPrimary + '66'} />
+            )}
+            {proximityStatus.loading && (
+              <MaterialIcons 
+                name="sync" 
+                size={20} 
+                color={COLORS.textPrimary + '66'} 
+                style={{ marginLeft: SPACING.xs }}
+              />
+            )}
+          </View>
+        </SettingItem>
+        
         <TouchableOpacity 
           onPress={() => setShowSensorModal(true)}
+          disabled={!isControlsEnabled}
           style={{ 
-            backgroundColor: COLORS.accent,
+            backgroundColor: isControlsEnabled ? COLORS.accent : COLORS.textPrimary + '33',
             borderRadius: 8,
             padding: SPACING.md,
             marginBottom: SPACING.md,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
+            opacity: isControlsEnabled ? 1 : 0.6
           }}
         >
-          <MaterialIcons name="add" size={20} color={COLORS.background} style={{ marginRight: SPACING.xs }} />
+          <MaterialIcons 
+            name="add" 
+            size={20} 
+            color={isControlsEnabled ? COLORS.background : COLORS.textPrimary + '66'} 
+            style={{ marginRight: SPACING.xs }} 
+          />
           <Text style={{
-            color: COLORS.background,
+            color: isControlsEnabled ? COLORS.background : COLORS.textPrimary + '66',
             fontSize: TYPOGRAPHY.body,
             fontWeight: '600'
           }}>
@@ -439,25 +510,62 @@ const MoreScreen = () => {
           </SettingItem>
         ) : (
           sensors.map((sensor) => (
-            <SensorCard key={sensor.id}>
+            <SensorCard key={sensor.id} style={{ 
+              opacity: isControlsEnabled ? 1 : 0.6,
+              backgroundColor: isControlsEnabled ? COLORS.secondary : COLORS.secondary + '66'
+            }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <MaterialIcons 
                   name={getSensorIcon(sensor.sensor_type)} 
                   size={24} 
-                  color={sensor.isActive ? COLORS.accent : COLORS.textPrimary + '99'} 
+                  color={
+                    !isControlsEnabled ? COLORS.textPrimary + '66' :
+                    sensor.isActive ? COLORS.accent : COLORS.textPrimary + '99'
+                  } 
                   style={{ marginRight: SPACING.sm }}
                 />
                 <SensorInfo>
-                  <SensorName>{sensor.name}</SensorName>
-                  <SensorType>{getSensorTypeLabel(sensor.sensor_type)}</SensorType>
-                  <SensorStatus isOn={sensor.isActive}>
-                    {sensor.isActive ? 'Activo' : 'Inactivo'}
+                  <SensorName style={{ 
+                    color: isControlsEnabled ? COLORS.textPrimary : COLORS.textPrimary + '66'
+                  }}>
+                    {sensor.name}
+                  </SensorName>
+                  <SensorType style={{ 
+                    color: isControlsEnabled ? COLORS.textPrimary + '99' : COLORS.textPrimary + '66'
+                  }}>
+                    {getSensorTypeLabel(sensor.sensor_type)}
+                  </SensorType>
+                  <SensorStatus 
+                    isOn={sensor.isActive}
+                    style={{ 
+                      color: !isControlsEnabled ? COLORS.textPrimary + '66' : 
+                             sensor.isActive ? COLORS.accent : COLORS.textPrimary + '99'
+                    }}
+                  >
+                    {!isControlsEnabled ? 'Bloqueado' :
+                     sensor.isActive ? 'Activo' : 'Inactivo'}
                   </SensorStatus>
                 </SensorInfo>
+                {!isControlsEnabled && (
+                  <MaterialIcons 
+                    name="lock" 
+                    size={16} 
+                    color={COLORS.textPrimary + '66'} 
+                    style={{ marginRight: SPACING.sm }}
+                  />
+                )}
               </View>
               <SensorActions>
-                <IconButton onPress={() => handleDeleteSensor(sensor.id, sensor.name)}>
-                  <MaterialIcons name="delete" size={20} color={COLORS.destructive} />
+                <IconButton 
+                  onPress={() => handleDeleteSensor(sensor.id, sensor.name)}
+                  disabled={!isControlsEnabled}
+                  style={{ opacity: isControlsEnabled ? 1 : 0.5 }}
+                >
+                  <MaterialIcons 
+                    name="delete" 
+                    size={20} 
+                    color={isControlsEnabled ? COLORS.destructive : COLORS.textPrimary + '66'} 
+                  />
                 </IconButton>
               </SensorActions>
             </SensorCard>
