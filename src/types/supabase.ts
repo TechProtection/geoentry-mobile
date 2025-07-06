@@ -34,66 +34,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      device_tracking: {
-        Row: {
-          accuracy: number | null
-          altitude: number | null
-          created_at: string | null
-          device_id: string
-          heading: number | null
-          id: string
-          latitude: number
-          longitude: number
-          speed: number | null
-          timestamp: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          accuracy?: number | null
-          altitude?: number | null
-          created_at?: string | null
-          device_id: string
-          heading?: number | null
-          id?: string
-          latitude: number
-          longitude: number
-          speed?: number | null
-          timestamp: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          accuracy?: number | null
-          altitude?: number | null
-          created_at?: string | null
-          device_id?: string
-          heading?: number | null
-          id?: string
-          latitude?: number
-          longitude?: number
-          speed?: number | null
-          timestamp?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "device_tracking_device_id_fkey"
-            columns: ["device_id"]
-            isOneToOne: false
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "device_tracking_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       devices: {
         Row: {
           created_at: string | null
@@ -264,67 +204,34 @@ export type Database = {
       sensors: {
         Row: {
           created_at: string | null
-          data_type: string
-          device_id: string
           id: string
+          isActive: boolean
           name: string
-          unit: string
+          sensor_type: Database["public"]["Enums"]["device_type_enum"]
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
-          data_type: string
-          device_id: string
           id?: string
+          isActive: boolean
           name: string
-          unit: string
+          sensor_type: Database["public"]["Enums"]["device_type_enum"]
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
-          data_type?: string
-          device_id?: string
           id?: string
+          isActive?: boolean
           name?: string
-          unit?: string
+          sensor_type?: Database["public"]["Enums"]["device_type_enum"]
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "sensors_device_id_fkey"
-            columns: ["device_id"]
-            isOneToOne: false
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-    }
-    Views: {
-      user_devices_latest_location: {
-        Row: {
-          accuracy: number | null
-          altitude: number | null
-          created_at: string | null
-          device_id: string | null
-          device_name: string | null
-          device_type: string | null
-          heading: number | null
-          id: string | null
-          is_active: boolean | null
-          latitude: number | null
-          longitude: number | null
-          speed: number | null
-          timestamp: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "device_tracking_device_id_fkey"
-            columns: ["device_id"]
-            isOneToOne: false
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "device_tracking_user_id_fkey"
+            foreignKeyName: "sensors_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -332,6 +239,9 @@ export type Database = {
           },
         ]
       }
+    }
+    Views: {
+      [_ in never]: never
     }
     Functions: {
       cleanup_old_tracking_data: {
@@ -356,6 +266,11 @@ export type Database = {
       }
     }
     Enums: {
+      device_type_enum:
+        | "led_tv"
+        | "smart_light"
+        | "air_conditioner"
+        | "coffee_maker"
       user_role: "USER" | "ADMIN"
     }
     CompositeTypes: {
@@ -475,6 +390,12 @@ export const Constants = {
   },
   public: {
     Enums: {
+      device_type_enum: [
+        "led_tv",
+        "smart_light",
+        "air_conditioner",
+        "coffee_maker",
+      ],
       user_role: ["USER", "ADMIN"],
     },
   },
