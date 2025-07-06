@@ -218,18 +218,6 @@ const DevicesScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Search Bar */}
-        <View style={tw`bg-gray-800 rounded-lg p-3 mb-6 flex-row items-center`}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" style={tw`mr-3`} />
-          <TextInput
-            style={tw`flex-1 text-white`}
-            placeholder="Buscar dispositivos..."
-            placeholderTextColor="#9ca3af"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-          />
-        </View>
-
         {/* Device List */}
         {filteredDevices.length === 0 ? (
           <View style={tw`items-center py-8`}>

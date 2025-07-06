@@ -72,10 +72,10 @@ interface CustomTabBarProps {
 
 const tabs: Tab[] = [
   { name: 'Home', title: 'Dashboard', icon: 'home', focusedIcon: 'home' },
-  { name: 'Groups', title: 'Locations', icon: 'map', focusedIcon: 'map' },
+  { name: 'Groups', title: 'Map', icon: 'map', focusedIcon: 'map' },
   { name: 'Devices', title: 'Devices', icon: 'smartphone', focusedIcon: 'smartphone' },
   { name: 'Stats', title: 'Events', icon: 'show-chart', focusedIcon: 'show-chart' },
-  { name: 'Location', title: 'Analytics', icon: 'analytics', focusedIcon: 'analytics' },
+  { name: 'Location', title: 'Location', icon: 'location-on', focusedIcon: 'location-on' },
   { name: 'More', title: 'Support', icon: 'help', focusedIcon: 'help' },
 ];
 
