@@ -1,11 +1,12 @@
-import React from 'react';
-import { ScrollView, FlatList, TouchableOpacity, Dimensions, View, Text } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, FlatList, TouchableOpacity, Dimensions, View, Text, Switch } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import styled from 'styled-components/native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../theme';
 import { Header } from '../components/Header';
 import { StatsCard } from '../components/StatsCard';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useSensors } from '../hooks/useSensors';
 import {
   LineChart,
   BarChart,
@@ -199,6 +200,57 @@ const NoDataText = styled.Text`
   text-align: center;
 `;
 
+const SensorTypeContainer = styled.View`
+  background-color: ${COLORS.secondary};
+  border-radius: 8px;
+  padding: ${SPACING.md}px;
+  margin-bottom: ${SPACING.md}px;
+`;
+
+const SensorTypeHeader = styled.View`
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: ${SPACING.md}px;
+`;
+
+const SensorTypeTitle = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.body}px;
+  font-weight: 600;
+  margin-left: ${SPACING.sm}px;
+  flex: 1;
+`;
+
+const SensorItem = styled.View`
+  background-color: ${COLORS.background};
+  border-radius: 8px;
+  padding: ${SPACING.md}px;
+  margin-bottom: ${SPACING.sm}px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const SensorInfo = styled.View`
+  flex: 1;
+`;
+
+const SensorName = styled.Text`
+  color: ${COLORS.textPrimary};
+  font-size: ${TYPOGRAPHY.body}px;
+  font-weight: 600;
+`;
+
+const SensorStatus = styled.Text`
+  color: ${COLORS.textPrimary}99;
+  font-size: ${TYPOGRAPHY.small}px;
+  margin-top: ${SPACING.xs}px;
+`;
+
+const SensorSwitch = styled(Switch)`
+  transform: scale(0.9);
+`;
+
 const SectionTitle = styled.Text`
   color: ${COLORS.textPrimary};
   font-size: ${TYPOGRAPHY.subtitle}px;
@@ -206,27 +258,40 @@ const SectionTitle = styled.Text`
   margin-bottom: ${SPACING.md}px;
 `;
 
-const screenWidth = Dimensions.get('window').width;
-const cardWidth = (screenWidth - 48) / 2; // 48 = padding + gaps
+// Configuración de tipos de sensores con sus iconos y etiquetas
+const sensorTypeConfig = {
+    led_tv: { icon: 'tv', label: 'TV LED' },
+    smart_light: { icon: 'lightbulb', label: 'Luces Inteligentes' },
+    air_conditioner: { icon: 'ac-unit', label: 'Aire Acondicionado' },
+    coffee_maker: { icon: 'coffee-maker', label: 'Cafetera' },
+} as const;
 
-const featureCards = [
-    { id: '1', icon: 'lock', title: 'Smart Lock' },
-    { id: '2', icon: 'lightbulb', title: 'Smart Lighting' },
-    { id: '3', icon: 'thermostat', title: 'Climate Control' },
-    { id: '4', icon: 'local-florist', title: 'Aromatic System' },
-];
-
-const quickStats = [
-    { value: '1.2 kW', label: 'Energy Used' },
-    { value: '12', label: 'Devices Active' },
-    { value: '72°F', label: 'Temperature' },
-];
+type SensorType = keyof typeof sensorTypeConfig;
 
 const HomeScreen = () => {
     const { metrics, chartData, deviceAnalysis, isLoading } = useAnalytics();
+    const { sensors, updateSensorStatus, loading: sensorsLoading } = useSensors();
     
     const screenWidth = Dimensions.get('window').width;
     const chartWidth = screenWidth - (SPACING.lg * 4); // Accounting for padding
+
+    // Agrupar sensores por tipo
+    const sensorsByType = sensors.reduce((acc, sensor) => {
+        const type = sensor.sensor_type as SensorType;
+        if (!acc[type]) {
+            acc[type] = [];
+        }
+        acc[type].push(sensor);
+        return acc;
+    }, {} as Record<SensorType, typeof sensors>);
+
+    // Obtener solo los tipos que el usuario tiene
+    const availableSensorTypes = Object.keys(sensorsByType) as SensorType[];
+
+    const handleToggleSensor = async (sensorId: string, currentStatus: boolean) => {
+        const newStatus = !currentStatus;
+        await updateSensorStatus(sensorId, newStatus);
+    };
 
     // Configuración de los gráficos
     const chartConfig = {
@@ -247,12 +312,72 @@ const HomeScreen = () => {
         },
     };
 
-    const renderFeatureCard = ({ item }: { item: typeof featureCards[0] }) => (
-        <FeatureCard style={{ width: cardWidth }} activeOpacity={0.7}>
-            <MaterialIcons name={item.icon as any} size={32} color={COLORS.accent} />
-            <FeatureTitle>{item.title}</FeatureTitle>
-        </FeatureCard>
-    );
+    const renderSensorsByType = () => {
+        if (sensorsLoading) {
+            return (
+                <View style={{ padding: SPACING.md, alignItems: 'center' }}>
+                    <Text style={{ color: COLORS.textPrimary + '99' }}>Cargando sensores...</Text>
+                </View>
+            );
+        }
+
+        if (availableSensorTypes.length === 0) {
+            return (
+                <View style={{ 
+                    backgroundColor: COLORS.secondary,
+                    borderRadius: 8,
+                    padding: SPACING.lg,
+                    alignItems: 'center',
+                    marginBottom: SPACING.md
+                }}>
+                    <MaterialIcons name="sensors-off" size={48} color={COLORS.textPrimary + '66'} />
+                    <Text style={{ 
+                        color: COLORS.textPrimary + '99', 
+                        textAlign: 'center',
+                        marginTop: SPACING.sm
+                    }}>
+                        No tienes sensores configurados.{'\n'}
+                        Ve a Configuración para agregar algunos.
+                    </Text>
+                </View>
+            );
+        }
+
+        return availableSensorTypes.map((sensorType) => {
+            const typeConfig = sensorTypeConfig[sensorType];
+            const typeSensors = sensorsByType[sensorType];
+            
+            return (
+                <SensorTypeContainer key={sensorType}>
+                    <SensorTypeHeader>
+                        <MaterialIcons 
+                            name={typeConfig.icon as any} 
+                            size={24} 
+                            color={COLORS.accent} 
+                        />
+                        <SensorTypeTitle>{typeConfig.label}</SensorTypeTitle>
+                    </SensorTypeHeader>
+                    
+                    {typeSensors.map((sensor) => (
+                        <SensorItem key={sensor.id}>
+                            <SensorInfo>
+                                <SensorName>{sensor.name}</SensorName>
+                                <SensorStatus>
+                                    {sensor.isActive ? 'Encendido' : 'Apagado'}
+                                </SensorStatus>
+                            </SensorInfo>
+                            <SensorSwitch
+                                value={sensor.isActive}
+                                onValueChange={() => handleToggleSensor(sensor.id, sensor.isActive)}
+                                trackColor={{ false: COLORS.textPrimary + '33', true: COLORS.accent + '66' }}
+                                thumbColor={sensor.isActive ? COLORS.accent : COLORS.textPrimary + '66'}
+                            />
+                        </SensorItem>
+                    ))}
+                </SensorTypeContainer>
+            );
+        });
+    };
 
     const formatLastEvent = (dateString: string) => {
         if (dateString === 'N/A') return 'Sin eventos';
@@ -312,13 +437,7 @@ const HomeScreen = () => {
                 </WelcomeSection>
 
                 <SectionTitle>Quick Controls</SectionTitle>
-                <FlatList
-                    data={featureCards}
-                    renderItem={renderFeatureCard}
-                    numColumns={2}
-                    scrollEnabled={false}
-                    contentContainerStyle={{ paddingHorizontal: SPACING.xs }}
-                />
+                {renderSensorsByType()}
 
                 {/* Analíticas */}
                 {!isLoading && (
